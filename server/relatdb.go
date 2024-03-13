@@ -59,17 +59,13 @@ func (self *Relatdb) handleClient(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	for {
 		lengthBytes := make([]byte, 3)
-		_, err := reader.Read(lengthBytes)
-		if err != nil {
-			fmt.Println("Received data fail")
-			continue
-		}
+		_, _ = reader.Read(lengthBytes)
 		length := utils.Uint32(lengthBytes)
 		if length <= 0 {
 			continue
 		}
 		data := make([]byte, length)
-		_, err = reader.Read(data)
+		_, err := reader.Read(data)
 		if err != nil {
 			fmt.Println("Received data fail")
 			continue

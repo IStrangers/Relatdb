@@ -40,15 +40,13 @@ type HandshakePacket struct {
 }
 
 func (self *HandshakePacket) GetDataLength() uint32 {
-	return uint32(1 + 1 + len(self.ServerVersion) + 1 + 4 + len(self.AuthPluginDataPart1) + 1 + 2 + 1 + 2 + len(self.AuthPluginDataPart2) + 13)
+	return uint32(1 + len(self.ServerVersion) + 1 + 4 + len(self.AuthPluginDataPart1) + 1 + 2 + 1 + 2 + len(self.AuthPluginDataPart2) + 13 + 1)
 }
 
 func (self *HandshakePacket) GetPacketBytes() []byte {
 	serverCapabilitiesFiller := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.LittleEndian, self.GetDataLength())
-	buf.WriteByte(0)
 	buf.WriteByte(self.ProtocolVersion)
 	buf.Write(self.ServerVersion)
 	buf.WriteByte(0)
@@ -59,6 +57,7 @@ func (self *HandshakePacket) GetPacketBytes() []byte {
 	buf.WriteByte(self.ServerCharsetIndex)
 	binary.Write(&buf, binary.LittleEndian, self.ServerStatus)
 	buf.Write(serverCapabilitiesFiller)
+	buf.Write(self.AuthPluginDataPart2)
 	buf.WriteByte(0)
 	return buf.Bytes()
 }

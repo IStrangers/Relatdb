@@ -12,7 +12,7 @@ var codeTableLength = len(codeTable)
 func RandomBytes(length uint32) []byte {
 	bytes := make([]byte, length)
 	for i := uint32(0); i < length; i++ {
-		bytes = append(bytes, codeTable[rand.Intn(codeTableLength)])
+		bytes[i] = codeTable[rand.Intn(codeTableLength)]
 	}
 	return bytes
 }
