@@ -3,12 +3,15 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"net"
 )
 
 type DataPacket interface {
 	GetPacketId() byte
 	GetDataLength() uint32
 	GetPacketBytes() []byte
+	SendDataPacket(conn net.Conn)
 }
 
 type AbstractDataPacket struct {
@@ -27,16 +30,27 @@ func (self *AbstractDataPacket) GetPacketBytes() []byte {
 	panic("Unrealized method")
 }
 
+func (self *AbstractDataPacket) SendDataPacket(conn net.Conn) {
+	packetBytes := self.GetPacketBytes()
+	_, err := conn.Write(packetBytes)
+	if err != nil {
+		fmt.Println("Send data packet error:", err.Error())
+	}
+}
+
+/*
+握手包
+*/
 type HandshakePacket struct {
 	AbstractDataPacket
-	ProtocolVersion     byte
-	ServerVersion       []byte
-	ConnectionId        uint32
-	AuthPluginDataPart1 []byte
-	ServerCapabilities  uint16
-	ServerCharsetIndex  byte
-	ServerStatus        uint16
-	AuthPluginDataPart2 []byte
+	ProtocolVersion     byte   //协议版本（1个字节）
+	ServerVersion       []byte //数据库版本（n个字节,结束补0）
+	ConnectionId        uint32 //连接ID（4个字节）
+	AuthPluginDataPart1 []byte //认证插件随机数1（8个字节）
+	ServerCapabilities  uint16 //数据库支持的功能（2个字节）
+	ServerCharsetIndex  byte   //使用的字符集（1个字节）
+	ServerStatus        uint16 //数据库状态（2个字节）
+	AuthPluginDataPart2 []byte //认证插件随机数2（12位）
 }
 
 func (self *HandshakePacket) GetDataLength() uint32 {
@@ -62,9 +76,12 @@ func (self *HandshakePacket) GetPacketBytes() []byte {
 	return buf.Bytes()
 }
 
+/*
+二进制数据包
+*/
 type BinaryPacket struct {
 	AbstractDataPacket
-	Data []byte
+	Data []byte //数据
 }
 
 func (self *BinaryPacket) GetDataLength() uint {
