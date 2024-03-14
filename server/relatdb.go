@@ -2,6 +2,8 @@ package server
 
 import (
 	"Relatdb/common"
+	"Relatdb/protocol"
+	"Relatdb/utils"
 	"fmt"
 	"net"
 )
@@ -15,15 +17,13 @@ type Relatdb struct {
 	version string
 	options *Options
 	ln      net.Listener
-	cch     ClientConnHandler
 }
 
 func CreateRelatdb(options *Options) *Relatdb {
 	server := &Relatdb{
-		version: common.Relatdb_Version,
+		version: common.RELATDB_VERSION,
 		options: options,
 	}
-	server.cch = buildClientConnHandler(server)
 	return server
 }
 
@@ -34,8 +34,8 @@ func (self *Relatdb) Start() {
 		fmt.Println("Error listening:", err.Error())
 		return
 	}
-	fmt.Println("Listening on ", bindAddress)
 	self.ln = ln
+	fmt.Println("Listening on ", bindAddress)
 
 	for {
 		conn, err := ln.Accept()
@@ -43,7 +43,7 @@ func (self *Relatdb) Start() {
 			fmt.Println("Error accepting: ", err.Error())
 			continue
 		}
-		go self.cch.handling(conn)
+		go self.handlingConnection(conn)
 	}
 }
 
@@ -72,4 +72,74 @@ func (self *Relatdb) getServerCapabilities() uint16 {
 	flag |= common.CLIENT_TRANSACTIONS
 	flag |= common.CLIENT_SECURE_CONNECTION
 	return flag
+}
+
+func (self *Relatdb) handlingConnection(conn net.Conn) {
+	connection := &Connection{conn: conn}
+	self.sendHandshakePacket(connection)
+	if !self.authentication(connection) {
+		return
+	}
+	self.receiveDataHandler(connection)
+}
+
+func (self *Relatdb) sendHandshakePacket(connection *Connection) {
+	handshakePacket := &protocol.HandshakePacket{
+		ProtocolVersion:     common.PROTOCOL_VERSION,
+		ServerVersion:       []byte(self.version),
+		ConnectionId:        1,
+		AuthPluginDataPart1: utils.RandomBytes(8),
+		ServerCapabilities:  self.getServerCapabilities(),
+		ServerCharsetIndex:  33,
+		ServerStatus:        2,
+		AuthPluginDataPart2: utils.RandomBytes(12),
+	}
+	self.sendDataPacket(connection, handshakePacket)
+}
+
+func (self *Relatdb) sendDataPacket(connection *Connection, dataPacket protocol.DataPacket) {
+	packetBytes := dataPacket.GetPacketBytes()
+	err := connection.Write(packetBytes)
+	if err != nil {
+		fmt.Println("Send data packet error:", err.Error())
+	}
+}
+
+func (self *Relatdb) receiveBinaryPacket(connection *Connection) *protocol.BinaryPacket {
+	bytes, _ := connection.ReadBySize(3)
+	packetSize := utils.Uint32(bytes)
+	if packetSize <= 0 || packetSize > common.MAX_PACKET_SIZE {
+		fmt.Println("Received packet size error:", packetSize)
+		return nil
+	}
+	packetId, _ := connection.ReadByte()
+	data, _ := connection.ReadBySize(packetSize)
+	binaryPacket := &protocol.BinaryPacket{}
+	binaryPacket.PacketSize = packetSize
+	binaryPacket.PacketId = packetId
+	binaryPacket.Data = data
+	return binaryPacket
+}
+
+func (self *Relatdb) authentication(connection *Connection) bool {
+	binaryPacket := self.receiveBinaryPacket(connection)
+	if binaryPacket == nil {
+		return false
+	}
+	if true {
+		connection.WriteErrorMessage(2, common.ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", ""))
+		return false
+	}
+	connection.Write(common.SERVER_AUTH_OK)
+	return true
+}
+
+func (self *Relatdb) receiveDataHandler(connection *Connection) {
+	for {
+		binaryPacket := self.receiveBinaryPacket(connection)
+		if binaryPacket == nil {
+			continue
+		}
+
+	}
 }

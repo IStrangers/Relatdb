@@ -3,15 +3,12 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"net"
 )
 
 type DataPacket interface {
 	GetPacketId() byte
 	GetDataLength() uint32
 	GetPacketBytes() []byte
-	SendDataPacket(conn net.Conn)
 }
 
 type AbstractDataPacket struct {
@@ -20,22 +17,6 @@ type AbstractDataPacket struct {
 
 func (self *AbstractDataPacket) GetPacketId() byte {
 	return self.PacketId
-}
-
-func (self *AbstractDataPacket) GetDataLength() uint32 {
-	panic("Unrealized method")
-}
-
-func (self *AbstractDataPacket) GetPacketBytes() []byte {
-	panic("Unrealized method")
-}
-
-func (self *AbstractDataPacket) SendDataPacket(conn net.Conn) {
-	packetBytes := self.GetPacketBytes()
-	_, err := conn.Write(packetBytes)
-	if err != nil {
-		fmt.Println("Send data packet error:", err.Error())
-	}
 }
 
 /*
@@ -81,13 +62,50 @@ func (self *HandshakePacket) GetPacketBytes() []byte {
 */
 type BinaryPacket struct {
 	AbstractDataPacket
-	Data []byte //数据
+	PacketSize uint32
+	Data       []byte //数据
 }
 
-func (self *BinaryPacket) GetDataLength() uint {
-	return uint(len(self.Data))
+func (self *BinaryPacket) GetDataLength() uint32 {
+	return uint32(len(self.Data))
 }
 
 func (self *BinaryPacket) GetPacketBytes() []byte {
 	return nil
+}
+
+type AuthPacket struct {
+	AbstractDataPacket
+	UserName []byte //用户名
+	Password []byte //密码
+}
+
+func (self *AuthPacket) GetDataLength() uint32 {
+	return 0
+}
+
+func (self *AuthPacket) GetPacketBytes() []byte {
+	return nil
+}
+
+type ErrorPacket struct {
+	AbstractDataPacket
+	ErrorCode uint16
+	Message   []byte
+}
+
+func (self *ErrorPacket) GetDataLength() uint32 {
+	return uint32(1 + 1 + 2 + 1 + len([]byte("HY000")) + len(self.Message))
+}
+
+func (self *ErrorPacket) GetPacketBytes() []byte {
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.LittleEndian, self.GetDataLength())
+	buf.WriteByte(self.PacketId)
+	buf.WriteByte(0xff)
+	binary.Write(&buf, binary.LittleEndian, self.ErrorCode)
+	buf.WriteByte('#')
+	buf.WriteString("HY000")
+	buf.Write(self.Message)
+	return buf.Bytes()
 }
