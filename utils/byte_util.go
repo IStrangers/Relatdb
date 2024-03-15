@@ -152,3 +152,10 @@ func (self *BytesReader) ReadToZero() []byte {
 		}
 	}
 }
+
+func (self *BytesReader) ReadRemainingBytes() []byte {
+	defer func() {
+		self.Offset = self.Length
+	}()
+	return self.Data[self.Offset:]
+}

@@ -76,10 +76,10 @@ func (self *Connection) SendHandshakePacket(connection *Connection) {
 		AuthPluginDataPart2: utils.RandomBytes(12),
 	}
 	connection.AuthPluginDataPart = append(handshakePacket.AuthPluginDataPart1, handshakePacket.AuthPluginDataPart2...)
-	self.sendDataPacket(connection, handshakePacket)
+	self.SendDataPacket(connection, handshakePacket)
 }
 
-func (self *Connection) sendDataPacket(connection *Connection, dataPacket protocol.DataPacket) {
+func (self *Connection) SendDataPacket(connection *Connection, dataPacket protocol.DataPacket) {
 	packetBytes := dataPacket.GetPacketBytes()
 	err := connection.Write(packetBytes)
 	if err != nil {
@@ -87,7 +87,7 @@ func (self *Connection) sendDataPacket(connection *Connection, dataPacket protoc
 	}
 }
 
-func (self *Connection) receiveBinaryPacket() *protocol.BinaryPacket {
+func (self *Connection) ReceiveBinaryPacket() *protocol.BinaryPacket {
 	bytes, _ := self.ReadBySize(3)
 	packetSize := utils.Uint32(bytes, false)
 	if packetSize <= 0 || packetSize > common.MAX_PACKET_SIZE {
@@ -107,12 +107,14 @@ func (self *Connection) AuthOK() {
 	self.Write(common.SERVER_AUTH_OK)
 }
 
-func (self *Connection) InitDB(packet *protocol.BinaryPacket) {
+func (self *Connection) InitDB(bytesReader *utils.BytesReader) {
 
 }
 
-func (self *Connection) Query(packet *protocol.BinaryPacket) {
-
+func (self *Connection) Query(bytesReader *utils.BytesReader) {
+	bytes := bytesReader.ReadRemainingBytes()
+	querySql := string(bytes)
+	println(querySql)
 }
 
 func (self *Connection) Ping() {
@@ -123,21 +125,21 @@ func (self *Connection) Close() {
 	self.Conn.Close()
 }
 
-func (self *Connection) Kill(packet *protocol.BinaryPacket) {
+func (self *Connection) Kill(bytesReader *utils.BytesReader) {
 }
 
-func (self *Connection) StmtPrepare(packet *protocol.BinaryPacket) {
-
-}
-
-func (self *Connection) StmtExecute(packet *protocol.BinaryPacket) {
+func (self *Connection) StmtPrepare(bytesReader *utils.BytesReader) {
 
 }
 
-func (self *Connection) StmtClose(packet *protocol.BinaryPacket) {
+func (self *Connection) StmtExecute(bytesReader *utils.BytesReader) {
 
 }
 
-func (self *Connection) Heartbeat(packet *protocol.BinaryPacket) {
+func (self *Connection) StmtClose(bytesReader *utils.BytesReader) {
+
+}
+
+func (self *Connection) Heartbeat(bytesReader *utils.BytesReader) {
 	self.Ping()
 }

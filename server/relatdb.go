@@ -3,6 +3,7 @@ package server
 import (
 	"Relatdb/common"
 	"Relatdb/protocol"
+	"Relatdb/utils"
 	"bytes"
 	"crypto/sha1"
 	"fmt"
@@ -85,7 +86,7 @@ func (self *Relatdb) handlingConnection(c net.Conn) {
 }
 
 func (self *Relatdb) authentication(conn *Connection) bool {
-	binaryPacket := conn.receiveBinaryPacket()
+	binaryPacket := conn.ReceiveBinaryPacket()
 	if binaryPacket == nil {
 		return false
 	}
@@ -130,16 +131,17 @@ func scramble411(data []byte, seed []byte) []byte {
 
 func (self *Relatdb) receiveCommandHandler(conn *Connection) {
 	for {
-		binaryPacket := conn.receiveBinaryPacket()
+		binaryPacket := conn.ReceiveBinaryPacket()
 		if binaryPacket == nil {
 			continue
 		}
-		switch binaryPacket.Data[0] {
+		bytesReader := utils.NewBytesReader(binaryPacket.Data)
+		switch bytesReader.ReadByte() {
 		case common.COM_INIT_DB:
-			conn.InitDB(binaryPacket)
+			conn.InitDB(bytesReader)
 			break
 		case common.COM_QUERY:
-			conn.Query(binaryPacket)
+			conn.Query(bytesReader)
 			break
 		case common.COM_PING:
 			conn.Ping()
@@ -148,19 +150,19 @@ func (self *Relatdb) receiveCommandHandler(conn *Connection) {
 			conn.Close()
 			break
 		case common.COM_PROCESS_KILL:
-			conn.Kill(binaryPacket)
+			conn.Kill(bytesReader)
 			break
 		case common.COM_STMT_PREPARE:
-			conn.StmtPrepare(binaryPacket)
+			conn.StmtPrepare(bytesReader)
 			break
 		case common.COM_STMT_EXECUTE:
-			conn.StmtExecute(binaryPacket)
+			conn.StmtExecute(bytesReader)
 			break
 		case common.COM_STMT_CLOSE:
-			conn.StmtClose(binaryPacket)
+			conn.StmtClose(bytesReader)
 			break
 		case common.COM_HEARTBEAT:
-			conn.Heartbeat(binaryPacket)
+			conn.Heartbeat(bytesReader)
 			break
 		default:
 			conn.WriteErrorMessage(1, common.ER_UNKNOWN_COM_ERROR, "Unknown command")
