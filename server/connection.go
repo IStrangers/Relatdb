@@ -1,6 +1,7 @@
 package server
 
 import (
+	"Relatdb/common"
 	"Relatdb/protocol"
 	"bufio"
 )
@@ -47,4 +48,40 @@ func (self *Connection) WriteErrorMessage(packetId byte, errorCode uint16, messa
 	errorPacket.Message = []byte(message)
 	packetBytes := errorPacket.GetPacketBytes()
 	return self.Write(packetBytes)
+}
+
+func (self *Connection) InitDB(packet *protocol.BinaryPacket) {
+
+}
+
+func (self *Connection) Query(packet *protocol.BinaryPacket) {
+
+}
+
+func (self *Connection) Ping() {
+	self.Write(common.SERVER_OK)
+}
+
+func (self *Connection) Close() {
+
+}
+
+func (self *Connection) Kill(packet *protocol.BinaryPacket) {
+
+}
+
+func (self *Connection) StmtPrepare(packet *protocol.BinaryPacket) {
+
+}
+
+func (self *Connection) StmtExecute(packet *protocol.BinaryPacket) {
+
+}
+
+func (self *Connection) StmtClose(packet *protocol.BinaryPacket) {
+
+}
+
+func (self *Connection) Heartbeat(packet *protocol.BinaryPacket) {
+	self.Ping()
 }

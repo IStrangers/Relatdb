@@ -175,6 +175,37 @@ func (self *Relatdb) receiveDataHandler(connection *Connection) {
 		if binaryPacket == nil {
 			continue
 		}
-
+		switch binaryPacket.Data[0] {
+		case common.COM_INIT_DB:
+			connection.InitDB(binaryPacket)
+			break
+		case common.COM_QUERY:
+			connection.Query(binaryPacket)
+			break
+		case common.COM_PING:
+			connection.Ping()
+			break
+		case common.COM_QUIT:
+			connection.Close()
+			break
+		case common.COM_PROCESS_KILL:
+			connection.Kill(binaryPacket)
+			break
+		case common.COM_STMT_PREPARE:
+			connection.StmtPrepare(binaryPacket)
+			break
+		case common.COM_STMT_EXECUTE:
+			connection.StmtExecute(binaryPacket)
+			break
+		case common.COM_STMT_CLOSE:
+			connection.StmtClose(binaryPacket)
+			break
+		case common.COM_HEARTBEAT:
+			connection.Heartbeat(binaryPacket)
+			break
+		default:
+			connection.WriteErrorMessage(1, common.ER_UNKNOWN_COM_ERROR, "Unknown command")
+			break
+		}
 	}
 }
