@@ -11,32 +11,56 @@ func FillZero(bytes []byte, end uint32) []byte {
 	return bytes
 }
 
-func Uint16(bytes []byte) uint16 {
-	return binary.LittleEndian.Uint16(FillZero(bytes, 2))
+func Uint16(bytes []byte, bigEndian bool) uint16 {
+	if bigEndian {
+		return binary.BigEndian.Uint16(FillZero(bytes, 2))
+	} else {
+		return binary.LittleEndian.Uint16(FillZero(bytes, 2))
+	}
 }
 
-func Uint16ToBytes(u uint16) []byte {
+func Uint16ToBytes(u uint16, bigEndian bool) []byte {
 	bytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(bytes, u)
+	if bigEndian {
+		binary.BigEndian.PutUint16(bytes, u)
+	} else {
+		binary.LittleEndian.PutUint16(bytes, u)
+	}
 	return bytes
 }
 
-func Uint32(bytes []byte) uint32 {
-	return binary.LittleEndian.Uint32(FillZero(bytes, 4))
+func Uint32(bytes []byte, bigEndian bool) uint32 {
+	if bigEndian {
+		return binary.BigEndian.Uint32(FillZero(bytes, 4))
+	} else {
+		return binary.LittleEndian.Uint32(FillZero(bytes, 4))
+	}
 }
 
-func Uint32ToBytes(u uint32) []byte {
+func Uint32ToBytes(u uint32, bigEndian bool) []byte {
 	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, u)
+	if bigEndian {
+		binary.BigEndian.PutUint32(bytes, u)
+	} else {
+		binary.LittleEndian.PutUint32(bytes, u)
+	}
 	return bytes
 }
 
-func Uint64(bytes []byte) uint64 {
-	return binary.LittleEndian.Uint64(FillZero(bytes, 8))
+func Uint64(bytes []byte, bigEndian bool) uint64 {
+	if bigEndian {
+		return binary.BigEndian.Uint64(FillZero(bytes, 8))
+	} else {
+		return binary.LittleEndian.Uint64(FillZero(bytes, 8))
+	}
 }
 
-func Uint64ToBytes(u uint64) []byte {
+func Uint64ToBytes(u uint64, bigEndian bool) []byte {
 	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, u)
+	if bigEndian {
+		binary.BigEndian.PutUint64(bytes, u)
+	} else {
+		binary.LittleEndian.PutUint64(bytes, u)
+	}
 	return bytes
 }

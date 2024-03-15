@@ -4,6 +4,7 @@ import (
 	"Relatdb/common"
 	"Relatdb/protocol"
 	"Relatdb/utils"
+	"bufio"
 	"fmt"
 	"net"
 )
@@ -75,7 +76,7 @@ func (self *Relatdb) getServerCapabilities() uint16 {
 }
 
 func (self *Relatdb) handlingConnection(conn net.Conn) {
-	connection := &Connection{conn: conn}
+	connection := &Connection{reader: bufio.NewReader(conn), writer: bufio.NewWriter(conn)}
 	self.sendHandshakePacket(connection)
 	if !self.authentication(connection) {
 		return
@@ -107,7 +108,7 @@ func (self *Relatdb) sendDataPacket(connection *Connection, dataPacket protocol.
 
 func (self *Relatdb) receiveBinaryPacket(connection *Connection) *protocol.BinaryPacket {
 	bytes, _ := connection.ReadBySize(3)
-	packetSize := utils.Uint32(bytes)
+	packetSize := utils.Uint32(bytes, false)
 	if packetSize <= 0 || packetSize > common.MAX_PACKET_SIZE {
 		fmt.Println("Received packet size error:", packetSize)
 		return nil

@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"Relatdb/utils"
 	"bytes"
 	"encoding/binary"
 )
@@ -8,6 +9,7 @@ import (
 type DataPacket interface {
 	GetPacketId() byte
 	GetDataLength() uint32
+	GetDataLengthBytes(uint32) []byte
 	GetPacketBytes() []byte
 }
 
@@ -17,6 +19,11 @@ type AbstractDataPacket struct {
 
 func (self *AbstractDataPacket) GetPacketId() byte {
 	return self.PacketId
+}
+
+func (self *AbstractDataPacket) GetDataLengthBytes(dataLength uint32) []byte {
+	bytes := utils.Uint32ToBytes(dataLength, true)[1:]
+	return []byte{bytes[2], bytes[1], bytes[0]}
 }
 
 /*
@@ -41,7 +48,8 @@ func (self *HandshakePacket) GetDataLength() uint32 {
 func (self *HandshakePacket) GetPacketBytes() []byte {
 	serverCapabilitiesFiller := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.LittleEndian, self.GetDataLength())
+	buf.Write(self.GetDataLengthBytes(self.GetDataLength()))
+	buf.WriteByte(0)
 	buf.WriteByte(self.ProtocolVersion)
 	buf.Write(self.ServerVersion)
 	buf.WriteByte(0)
@@ -90,22 +98,25 @@ func (self *AuthPacket) GetPacketBytes() []byte {
 
 type ErrorPacket struct {
 	AbstractDataPacket
-	ErrorCode uint16
-	Message   []byte
+	FieldCount     byte   //包中的字段个数
+	ErrorCode      uint16 //错误代码
+	SqlStateMarker byte   //SQL状态标识符
+	SqlState       []byte //SQL状态
+	Message        []byte //错误消息内容
 }
 
 func (self *ErrorPacket) GetDataLength() uint32 {
-	return uint32(1 + 1 + 2 + 1 + len([]byte("HY000")) + len(self.Message))
+	return uint32(1 + 2 + 1 + len(self.SqlState) + len(self.Message))
 }
 
 func (self *ErrorPacket) GetPacketBytes() []byte {
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.LittleEndian, self.GetDataLength())
+	buf.Write(self.GetDataLengthBytes(self.GetDataLength()))
 	buf.WriteByte(self.PacketId)
-	buf.WriteByte(0xff)
+	buf.WriteByte(self.FieldCount)
 	binary.Write(&buf, binary.LittleEndian, self.ErrorCode)
-	buf.WriteByte('#')
-	buf.WriteString("HY000")
+	buf.WriteByte(self.SqlStateMarker)
+	buf.Write(self.SqlState)
 	buf.Write(self.Message)
 	return buf.Bytes()
 }
