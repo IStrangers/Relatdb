@@ -1,6 +1,8 @@
 package common
 
-const RELATDB_VERSION = "Relatdb 1.0"
+const SERVER_VERSION = "Relatdb 1.0"
+const SERVER_ROOT_USERNAME = "root"
+const SERVER_ROOT_PASSWORD = "123456"
 const PROTOCOL_VERSION = 10
 const MAX_PACKET_SIZE = 16 * 1024 * 1024
 

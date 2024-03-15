@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"Relatdb/common"
 	"Relatdb/utils"
 	"bytes"
 	"encoding/binary"
@@ -14,7 +15,8 @@ type DataPacket interface {
 }
 
 type AbstractDataPacket struct {
-	PacketId byte
+	PacketSize uint32
+	PacketId   byte
 }
 
 func (self *AbstractDataPacket) GetPacketId() byte {
@@ -70,8 +72,7 @@ func (self *HandshakePacket) GetPacketBytes() []byte {
 */
 type BinaryPacket struct {
 	AbstractDataPacket
-	PacketSize uint32
-	Data       []byte //数据
+	Data []byte //数据
 }
 
 func (self *BinaryPacket) GetDataLength() uint32 {
@@ -84,8 +85,13 @@ func (self *BinaryPacket) GetPacketBytes() []byte {
 
 type AuthPacket struct {
 	AbstractDataPacket
-	UserName []byte //用户名
-	Password []byte //密码
+	ClientFlags   uint32 //客户端功能
+	MaxPacketSize uint32 //最大包大小
+	CharsetIndex  byte   //字符集
+	Extra         []byte //控制信息
+	UserName      string //用户名
+	Password      []byte //密码
+	DataBase      string //数据库
 }
 
 func (self *AuthPacket) GetDataLength() uint32 {
@@ -94,6 +100,48 @@ func (self *AuthPacket) GetDataLength() uint32 {
 
 func (self *AuthPacket) GetPacketBytes() []byte {
 	return nil
+}
+
+func (self *AuthPacket) Load(packet *BinaryPacket) {
+	bytesReader := utils.NewBytesReader(packet.Data)
+	self.PacketSize = packet.PacketSize
+	self.PacketId = packet.PacketId
+	self.ClientFlags = bytesReader.ReadLittleEndianUint32()
+	self.MaxPacketSize = bytesReader.ReadLittleEndianUint32()
+	self.CharsetIndex = bytesReader.ReadByte()
+	offset := bytesReader.Offset
+	length := readLength(bytesReader)
+	fillerLength := uint64(23)
+	if length > 0 && length < fillerLength {
+		self.Extra = bytesReader.ReadBytes(length)
+	}
+	bytesReader.Offset = offset + fillerLength
+	self.UserName = string(bytesReader.ReadToZero())
+	length = readLength(bytesReader)
+	if length > 0 {
+		self.Password = bytesReader.ReadBytes(length)
+	} else {
+		self.Password = []byte{}
+	}
+	if self.ClientFlags&common.CLIENT_CONNECT_WITH_DB != 0 {
+		self.DataBase = string(bytesReader.ReadToZero())
+	}
+}
+
+func readLength(bytesReader *utils.BytesReader) uint64 {
+	length := bytesReader.ReadByte()
+	switch length {
+	case 251:
+		return 0
+	case 252:
+		return uint64(bytesReader.ReadLittleEndianUint16())
+	case 253:
+		return uint64(utils.Uint32(bytesReader.ReadBytes(3), false))
+	case 254:
+		return bytesReader.ReadLittleEndianUint64()
+	default:
+		return uint64(length)
+	}
 }
 
 type ErrorPacket struct {

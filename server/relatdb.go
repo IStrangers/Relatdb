@@ -5,6 +5,8 @@ import (
 	"Relatdb/protocol"
 	"Relatdb/utils"
 	"bufio"
+	"bytes"
+	"crypto/sha1"
 	"fmt"
 	"net"
 )
@@ -22,7 +24,7 @@ type Relatdb struct {
 
 func CreateRelatdb(options *Options) *Relatdb {
 	server := &Relatdb{
-		version: common.RELATDB_VERSION,
+		version: common.SERVER_VERSION,
 		options: options,
 	}
 	return server
@@ -76,7 +78,7 @@ func (self *Relatdb) getServerCapabilities() uint16 {
 }
 
 func (self *Relatdb) handlingConnection(conn net.Conn) {
-	connection := &Connection{reader: bufio.NewReader(conn), writer: bufio.NewWriter(conn)}
+	connection := &Connection{Reader: bufio.NewReader(conn), Writer: bufio.NewWriter(conn)}
 	self.sendHandshakePacket(connection)
 	if !self.authentication(connection) {
 		return
@@ -95,6 +97,7 @@ func (self *Relatdb) sendHandshakePacket(connection *Connection) {
 		ServerStatus:        2,
 		AuthPluginDataPart2: utils.RandomBytes(12),
 	}
+	connection.AuthPluginDataPart = append(handshakePacket.AuthPluginDataPart1, handshakePacket.AuthPluginDataPart2...)
 	self.sendDataPacket(connection, handshakePacket)
 }
 
@@ -127,12 +130,43 @@ func (self *Relatdb) authentication(connection *Connection) bool {
 	if binaryPacket == nil {
 		return false
 	}
-	if true {
-		connection.WriteErrorMessage(2, common.ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", ""))
+	authPacket := &protocol.AuthPacket{}
+	authPacket.Load(binaryPacket)
+	if !checkUserNamePassword(authPacket.UserName, authPacket.Password, connection.AuthPluginDataPart) {
+		connection.WriteErrorMessage(2, common.ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", authPacket.UserName))
 		return false
 	}
 	connection.Write(common.SERVER_AUTH_OK)
 	return true
+}
+
+func checkUserNamePassword(userName string, password []byte, authPluginDataPart []byte) bool {
+	if userName != common.SERVER_ROOT_USERNAME || password == nil || len(password) == 0 {
+		return false
+	}
+	rootPassword := scramble411([]byte(common.SERVER_ROOT_PASSWORD), authPluginDataPart)
+	return bytes.Equal(rootPassword, password)
+}
+
+func scramble411(data []byte, seed []byte) []byte {
+	crypt := sha1.New()
+
+	crypt.Write(data)
+	stage1 := crypt.Sum(nil)
+
+	crypt.Reset()
+	crypt.Write(stage1)
+	stage2 := crypt.Sum(nil)
+
+	crypt.Reset()
+	crypt.Write(seed)
+	crypt.Write(stage2)
+	stage3 := crypt.Sum(nil)
+	for i := range stage3 {
+		stage3[i] ^= stage1[i]
+	}
+
+	return stage3
 }
 
 func (self *Relatdb) receiveDataHandler(connection *Connection) {

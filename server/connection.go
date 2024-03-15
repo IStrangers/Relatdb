@@ -6,12 +6,14 @@ import (
 )
 
 type Connection struct {
-	reader *bufio.Reader
-	writer *bufio.Writer
+	Reader *bufio.Reader
+	Writer *bufio.Writer
+
+	AuthPluginDataPart []byte
 }
 
 func (self *Connection) Read(bytes []byte) ([]byte, error) {
-	_, err := self.reader.Read(bytes)
+	_, err := self.Reader.Read(bytes)
 	return bytes, err
 }
 
@@ -28,9 +30,9 @@ func (self *Connection) ReadByte() (byte, error) {
 }
 
 func (self *Connection) Write(bytes []byte) error {
-	_, err := self.writer.Write(bytes)
+	_, err := self.Writer.Write(bytes)
 	if err == nil {
-		err = self.writer.Flush()
+		err = self.Writer.Flush()
 	}
 	return err
 }
