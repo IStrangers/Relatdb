@@ -3,7 +3,6 @@ package server
 import (
 	"Relatdb/common"
 	"Relatdb/protocol"
-	"Relatdb/utils"
 	"bufio"
 	"bytes"
 	"crypto/sha1"
@@ -78,55 +77,16 @@ func (self *Relatdb) getServerCapabilities() uint16 {
 }
 
 func (self *Relatdb) handlingConnection(conn net.Conn) {
-	connection := &Connection{Reader: bufio.NewReader(conn), Writer: bufio.NewWriter(conn)}
-	self.sendHandshakePacket(connection)
+	connection := &Connection{Server: self, Reader: bufio.NewReader(conn), Writer: bufio.NewWriter(conn)}
+	connection.SendHandshakePacket(connection)
 	if !self.authentication(connection) {
 		return
 	}
 	self.receiveDataHandler(connection)
 }
 
-func (self *Relatdb) sendHandshakePacket(connection *Connection) {
-	handshakePacket := &protocol.HandshakePacket{
-		ProtocolVersion:     common.PROTOCOL_VERSION,
-		ServerVersion:       []byte(self.version),
-		ConnectionId:        1,
-		AuthPluginDataPart1: utils.RandomBytes(8),
-		ServerCapabilities:  self.getServerCapabilities(),
-		ServerCharsetIndex:  33,
-		ServerStatus:        2,
-		AuthPluginDataPart2: utils.RandomBytes(12),
-	}
-	connection.AuthPluginDataPart = append(handshakePacket.AuthPluginDataPart1, handshakePacket.AuthPluginDataPart2...)
-	self.sendDataPacket(connection, handshakePacket)
-}
-
-func (self *Relatdb) sendDataPacket(connection *Connection, dataPacket protocol.DataPacket) {
-	packetBytes := dataPacket.GetPacketBytes()
-	err := connection.Write(packetBytes)
-	if err != nil {
-		fmt.Println("Send data packet error:", err.Error())
-	}
-}
-
-func (self *Relatdb) receiveBinaryPacket(connection *Connection) *protocol.BinaryPacket {
-	bytes, _ := connection.ReadBySize(3)
-	packetSize := utils.Uint32(bytes, false)
-	if packetSize <= 0 || packetSize > common.MAX_PACKET_SIZE {
-		fmt.Println("Received packet size error:", packetSize)
-		return nil
-	}
-	packetId, _ := connection.ReadByte()
-	data, _ := connection.ReadBySize(packetSize)
-	binaryPacket := &protocol.BinaryPacket{}
-	binaryPacket.PacketSize = packetSize
-	binaryPacket.PacketId = packetId
-	binaryPacket.Data = data
-	return binaryPacket
-}
-
 func (self *Relatdb) authentication(connection *Connection) bool {
-	binaryPacket := self.receiveBinaryPacket(connection)
+	binaryPacket := connection.receiveBinaryPacket()
 	if binaryPacket == nil {
 		return false
 	}
@@ -136,7 +96,7 @@ func (self *Relatdb) authentication(connection *Connection) bool {
 		connection.WriteErrorMessage(2, common.ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", authPacket.UserName))
 		return false
 	}
-	connection.Write(common.SERVER_AUTH_OK)
+	connection.AuthOK()
 	return true
 }
 
@@ -171,7 +131,7 @@ func scramble411(data []byte, seed []byte) []byte {
 
 func (self *Relatdb) receiveDataHandler(connection *Connection) {
 	for {
-		binaryPacket := self.receiveBinaryPacket(connection)
+		binaryPacket := connection.receiveBinaryPacket()
 		if binaryPacket == nil {
 			continue
 		}

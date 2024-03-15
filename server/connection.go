@@ -3,10 +3,13 @@ package server
 import (
 	"Relatdb/common"
 	"Relatdb/protocol"
+	"Relatdb/utils"
 	"bufio"
+	"fmt"
 )
 
 type Connection struct {
+	Server *Relatdb
 	Reader *bufio.Reader
 	Writer *bufio.Writer
 
@@ -48,6 +51,49 @@ func (self *Connection) WriteErrorMessage(packetId byte, errorCode uint16, messa
 	errorPacket.Message = []byte(message)
 	packetBytes := errorPacket.GetPacketBytes()
 	return self.Write(packetBytes)
+}
+
+func (self *Connection) SendHandshakePacket(connection *Connection) {
+	handshakePacket := &protocol.HandshakePacket{
+		ProtocolVersion:     common.PROTOCOL_VERSION,
+		ServerVersion:       []byte(self.Server.version),
+		ConnectionId:        1,
+		AuthPluginDataPart1: utils.RandomBytes(8),
+		ServerCapabilities:  self.Server.getServerCapabilities(),
+		ServerCharsetIndex:  33,
+		ServerStatus:        2,
+		AuthPluginDataPart2: utils.RandomBytes(12),
+	}
+	connection.AuthPluginDataPart = append(handshakePacket.AuthPluginDataPart1, handshakePacket.AuthPluginDataPart2...)
+	self.sendDataPacket(connection, handshakePacket)
+}
+
+func (self *Connection) sendDataPacket(connection *Connection, dataPacket protocol.DataPacket) {
+	packetBytes := dataPacket.GetPacketBytes()
+	err := connection.Write(packetBytes)
+	if err != nil {
+		fmt.Println("Send data packet error:", err.Error())
+	}
+}
+
+func (self *Connection) receiveBinaryPacket() *protocol.BinaryPacket {
+	bytes, _ := self.ReadBySize(3)
+	packetSize := utils.Uint32(bytes, false)
+	if packetSize <= 0 || packetSize > common.MAX_PACKET_SIZE {
+		fmt.Println("Received packet size error:", packetSize)
+		return nil
+	}
+	packetId, _ := self.ReadByte()
+	data, _ := self.ReadBySize(packetSize)
+	binaryPacket := &protocol.BinaryPacket{}
+	binaryPacket.PacketSize = packetSize
+	binaryPacket.PacketId = packetId
+	binaryPacket.Data = data
+	return binaryPacket
+}
+
+func (self *Connection) AuthOK() {
+	self.Write(common.SERVER_AUTH_OK)
 }
 
 func (self *Connection) InitDB(packet *protocol.BinaryPacket) {
