@@ -76,27 +76,27 @@ func (self *Relatdb) getServerCapabilities() uint16 {
 	return flag
 }
 
-func (self *Relatdb) handlingConnection(conn net.Conn) {
-	connection := &Connection{Server: self, Reader: bufio.NewReader(conn), Writer: bufio.NewWriter(conn)}
-	connection.SendHandshakePacket(connection)
-	if !self.authentication(connection) {
+func (self *Relatdb) handlingConnection(c net.Conn) {
+	conn := &Connection{Server: self, Reader: bufio.NewReader(c), Writer: bufio.NewWriter(c)}
+	conn.SendHandshakePacket(conn)
+	if !self.authentication(conn) {
 		return
 	}
-	self.receiveDataHandler(connection)
+	self.receiveCommandHandler(conn)
 }
 
-func (self *Relatdb) authentication(connection *Connection) bool {
-	binaryPacket := connection.receiveBinaryPacket()
+func (self *Relatdb) authentication(conn *Connection) bool {
+	binaryPacket := conn.receiveBinaryPacket()
 	if binaryPacket == nil {
 		return false
 	}
 	authPacket := &protocol.AuthPacket{}
 	authPacket.Load(binaryPacket)
-	if !checkUserNamePassword(authPacket.UserName, authPacket.Password, connection.AuthPluginDataPart) {
-		connection.WriteErrorMessage(2, common.ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", authPacket.UserName))
+	if !checkUserNamePassword(authPacket.UserName, authPacket.Password, conn.AuthPluginDataPart) {
+		conn.WriteErrorMessage(2, common.ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", authPacket.UserName))
 		return false
 	}
-	connection.AuthOK()
+	conn.AuthOK()
 	return true
 }
 
@@ -129,42 +129,42 @@ func scramble411(data []byte, seed []byte) []byte {
 	return stage3
 }
 
-func (self *Relatdb) receiveDataHandler(connection *Connection) {
+func (self *Relatdb) receiveCommandHandler(conn *Connection) {
 	for {
-		binaryPacket := connection.receiveBinaryPacket()
+		binaryPacket := conn.receiveBinaryPacket()
 		if binaryPacket == nil {
 			continue
 		}
 		switch binaryPacket.Data[0] {
 		case common.COM_INIT_DB:
-			connection.InitDB(binaryPacket)
+			conn.InitDB(binaryPacket)
 			break
 		case common.COM_QUERY:
-			connection.Query(binaryPacket)
+			conn.Query(binaryPacket)
 			break
 		case common.COM_PING:
-			connection.Ping()
+			conn.Ping()
 			break
 		case common.COM_QUIT:
-			connection.Close()
+			conn.Close()
 			break
 		case common.COM_PROCESS_KILL:
-			connection.Kill(binaryPacket)
+			conn.Kill(binaryPacket)
 			break
 		case common.COM_STMT_PREPARE:
-			connection.StmtPrepare(binaryPacket)
+			conn.StmtPrepare(binaryPacket)
 			break
 		case common.COM_STMT_EXECUTE:
-			connection.StmtExecute(binaryPacket)
+			conn.StmtExecute(binaryPacket)
 			break
 		case common.COM_STMT_CLOSE:
-			connection.StmtClose(binaryPacket)
+			conn.StmtClose(binaryPacket)
 			break
 		case common.COM_HEARTBEAT:
-			connection.Heartbeat(binaryPacket)
+			conn.Heartbeat(binaryPacket)
 			break
 		default:
-			connection.WriteErrorMessage(1, common.ER_UNKNOWN_COM_ERROR, "Unknown command")
+			conn.WriteErrorMessage(1, common.ER_UNKNOWN_COM_ERROR, "Unknown command")
 			break
 		}
 	}
