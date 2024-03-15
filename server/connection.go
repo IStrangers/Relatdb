@@ -6,14 +6,25 @@ import (
 	"Relatdb/utils"
 	"bufio"
 	"fmt"
+	"net"
 )
 
 type Connection struct {
 	Server *Relatdb
+	Conn   net.Conn
 	Reader *bufio.Reader
 	Writer *bufio.Writer
 
 	AuthPluginDataPart []byte
+}
+
+func NewConnection(server *Relatdb, conn net.Conn) *Connection {
+	return &Connection{
+		Server: server,
+		Conn:   conn,
+		Reader: bufio.NewReader(conn),
+		Writer: bufio.NewWriter(conn),
+	}
 }
 
 func (self *Connection) Read(bytes []byte) ([]byte, error) {
@@ -109,11 +120,10 @@ func (self *Connection) Ping() {
 }
 
 func (self *Connection) Close() {
-
+	self.Conn.Close()
 }
 
 func (self *Connection) Kill(packet *protocol.BinaryPacket) {
-
 }
 
 func (self *Connection) StmtPrepare(packet *protocol.BinaryPacket) {

@@ -3,7 +3,6 @@ package server
 import (
 	"Relatdb/common"
 	"Relatdb/protocol"
-	"bufio"
 	"bytes"
 	"crypto/sha1"
 	"fmt"
@@ -77,7 +76,7 @@ func (self *Relatdb) getServerCapabilities() uint16 {
 }
 
 func (self *Relatdb) handlingConnection(c net.Conn) {
-	conn := &Connection{Server: self, Reader: bufio.NewReader(c), Writer: bufio.NewWriter(c)}
+	conn := NewConnection(self, c)
 	conn.SendHandshakePacket(conn)
 	if !self.authentication(conn) {
 		return
