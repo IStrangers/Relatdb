@@ -272,3 +272,15 @@ func (self *Limit) StartIndex() uint64 {
 func (self *Limit) EndIndex() uint64 {
 	return self.Count.EndIndex()
 }
+
+type ColumnDefinition struct {
+	_Statement_
+
+	Name         *Identifier
+	Type         byte        //字段类型
+	Flag         uint        //字段标记: NotNull, Unsigned, PriKey
+	Length       int         //字段长度
+	Decimal      int         //小数位数
+	DefaultValue Expression  //默认值
+	Comment      *Identifier //注释
+}
