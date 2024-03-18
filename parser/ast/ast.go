@@ -42,6 +42,20 @@ type _ResultSet_ struct {
 func (self *_ResultSet_) resultSet() {
 }
 
+type ExpressionStatement struct {
+	_Statement_
+
+	Expr Expression
+}
+
+func (self *ExpressionStatement) StartIndex() uint64 {
+	return self.Expr.StartIndex()
+}
+
+func (self *ExpressionStatement) EndIndex() uint64 {
+	return self.Expr.EndIndex()
+}
+
 type Identifier struct {
 	_Expression_
 

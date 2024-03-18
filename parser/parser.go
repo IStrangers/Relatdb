@@ -3,6 +3,7 @@ package parser
 import (
 	"Relatdb/parser/ast"
 	"fmt"
+	"strings"
 )
 
 type Parser struct {
@@ -26,15 +27,15 @@ func CreateParser(baseOffset uint64, content string, skipComment bool, skipWhite
 		baseOffset:     baseOffset,
 		skipComment:    skipComment,
 		skipWhiteSpace: skipWhiteSpace,
-		content:        content,
+		content:        strings.ToLower(content),
 		length:         uint64(len(content)),
 		chr:            ' ',
 	}
 }
 
-func (self *Parser) Parse() *ast.Node {
+func (self *Parser) Parse() ast.Node {
 	self.next()
-	return nil
+	return self.parseStatement()
 }
 
 func (self *Parser) ScanNextToken() (Token, string, string, uint64) {
@@ -60,6 +61,14 @@ func (self *Parser) expectToken(tkn Token) Token {
 	}
 	self.next()
 	return tkn
+}
+
+func (self *Parser) expectEqualsToken(tkn Token) bool {
+	if self.token != tkn {
+		return false
+	}
+	self.next()
+	return true
 }
 
 func (self *Parser) slice(start, end uint64) string {
