@@ -41,7 +41,7 @@ func (self *Parser) parseCreateDatabaseStatement(createIndex uint64) ast.Stateme
 	return &ast.CreateDatabaseStatement{
 		CreateIndex: createIndex,
 		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
-		Name:        self.parseIdentifier(),
+		Name:        self.parseStringLiteralOrIdentifier(),
 	}
 }
 
@@ -59,7 +59,7 @@ func (self *Parser) parseCreateIndexStatement(createIndex uint64) ast.Statement 
 	return &ast.CreateIndexStatement{
 		CreateIndex: createIndex,
 		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
-		Name:        self.parseIdentifier(),
+		Name:        self.parseStringLiteralOrIdentifier(),
 		TableName:   self.parseTableName(),
 	}
 }
@@ -84,7 +84,7 @@ func (self *Parser) parseDropDatabaseStatement(dropIndex uint64) ast.Statement {
 	return &ast.DropDatabaseStatement{
 		DropIndex: dropIndex,
 		IfExists:  self.expectEqualsToken(IF) && self.expectEqualsToken(EXISTS),
-		Name:      self.parseIdentifier(),
+		Name:      self.parseStringLiteralOrIdentifier(),
 	}
 }
 
@@ -103,7 +103,7 @@ func (self *Parser) parseDropIndexStatement(dropIndex uint64) ast.Statement {
 		DropIndex: dropIndex,
 		IfExists:  self.expectEqualsToken(IF) && self.expectEqualsToken(EXISTS),
 		TableName: self.parseTableName(),
-		Name:      self.parseIdentifier(),
+		Name:      self.parseStringLiteralOrIdentifier(),
 	}
 }
 

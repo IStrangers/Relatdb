@@ -56,6 +56,66 @@ func (self *ExpressionStatement) EndIndex() uint64 {
 	return self.Expr.EndIndex()
 }
 
+type NumberLiteral struct {
+	_Expression_
+	Index   uint64
+	Literal string
+	Value   any
+}
+
+func (self *NumberLiteral) StartIndex() uint64 {
+	return self.Index
+}
+
+func (self *NumberLiteral) EndIndex() uint64 {
+	return self.Index + uint64(len(self.Literal))
+}
+
+type StringLiteral struct {
+	_Expression_
+	Index   uint64
+	Literal string
+	Value   string
+}
+
+func (self *StringLiteral) StartIndex() uint64 {
+	return self.Index
+}
+
+func (self *StringLiteral) EndIndex() uint64 {
+	return self.Index + uint64(len(self.Literal))
+}
+
+type BooleanLiteral struct {
+	_Expression_
+	Index uint64
+	Value bool
+}
+
+func (self *BooleanLiteral) StartIndex() uint64 {
+	return self.Index
+}
+
+func (self *BooleanLiteral) EndIndex() uint64 {
+	if self.Value {
+		return self.Index + 4
+	}
+	return self.Index + 5
+}
+
+type NullLiteral struct {
+	_Expression_
+	Index uint64
+}
+
+func (self *NullLiteral) StartIndex() uint64 {
+	return self.Index
+}
+
+func (self *NullLiteral) EndIndex() uint64 {
+	return self.Index + 4
+}
+
 type Identifier struct {
 	_Expression_
 
@@ -90,8 +150,8 @@ type TableName struct {
 	_Expression_
 	_ResultSet_
 
-	Schema *Identifier
-	Name   *Identifier
+	Schema Expression
+	Name   Expression
 }
 
 func (self *TableName) StartIndex() uint64 {
@@ -108,9 +168,9 @@ func (self *TableName) EndIndex() uint64 {
 type ColumnName struct {
 	_Expression_
 
-	Schema *Identifier
-	Table  *Identifier
-	Name   *Identifier
+	Schema Expression
+	Table  Expression
+	Name   Expression
 }
 
 func (self *ColumnName) StartIndex() uint64 {
@@ -131,7 +191,7 @@ type SelectField struct {
 	_Expression_
 
 	Expr   Expression
-	AsName *Identifier
+	AsName Expression
 }
 
 func (self *SelectField) StartIndex() uint64 {
@@ -290,11 +350,11 @@ func (self *Limit) EndIndex() uint64 {
 type ColumnDefinition struct {
 	_Statement_
 
-	Name         *Identifier
-	Type         byte        //字段类型
-	Flag         uint        //字段标记: NotNull, Unsigned, PriKey
-	Length       int         //字段长度
-	Decimal      int         //小数位数
-	DefaultValue Expression  //默认值
-	Comment      *Identifier //注释
+	Name         Expression
+	Type         byte          //字段类型
+	Flag         uint          //字段标记: NotNull, Unsigned, PriKey
+	Length       int           //字段长度
+	Decimal      int           //小数位数
+	DefaultValue Expression    //默认值
+	Comment      StringLiteral //注释
 }

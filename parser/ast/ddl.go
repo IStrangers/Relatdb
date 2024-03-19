@@ -17,7 +17,7 @@ type CreateDatabaseStatement struct {
 
 	CreateIndex uint64
 	IfNotExists bool
-	Name        *Identifier
+	Name        Expression
 }
 
 func (self *CreateDatabaseStatement) StartIndex() uint64 {
@@ -33,7 +33,7 @@ type DropDatabaseStatement struct {
 
 	DropIndex uint64
 	IfExists  bool
-	Name      *Identifier
+	Name      Expression
 }
 
 func (self *DropDatabaseStatement) StartIndex() uint64 {
@@ -91,7 +91,7 @@ type CreateIndexStatement struct {
 
 	CreateIndex uint64
 	IfNotExists bool
-	Name        *Identifier
+	Name        Expression
 	TableName   *TableName
 	ColumnNames []*ColumnName
 	Type        IndexType
@@ -111,7 +111,7 @@ type DropIndexStatement struct {
 	DropIndex uint64
 	IfExists  bool
 	TableName *TableName
-	Name      *Identifier
+	Name      Expression
 }
 
 func (self *DropIndexStatement) StartIndex() uint64 {
