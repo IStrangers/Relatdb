@@ -156,7 +156,30 @@ func (self *Parser) parseDropIndexStatement(dropIndex uint64) ast.Statement {
 }
 
 func (self *Parser) parseInsertStatement() ast.Statement {
-	return nil
+	insertStatement := &ast.InsertStatement{
+		InsertIndex: self.expect(INSERT),
+	}
+	self.expectToken(INTO)
+	insertStatement.TableName = self.parseTableName()
+	self.expectToken(LEFT_PARENTHESIS)
+	insertStatement.ColumnNames = self.parseColumnNames()
+	self.expectToken(RIGHT_PARENTHESIS)
+	self.expectToken(VALUES)
+	for {
+		self.expectToken(LEFT_PARENTHESIS)
+		var values []ast.Expression
+		for self.token != RIGHT_PARENTHESIS && self.token != EOF {
+			values = append(values, self.parseExpression())
+			self.expectEqualsToken(COMMA)
+		}
+		insertStatement.Values = append(insertStatement.Values, values)
+		self.expectToken(RIGHT_PARENTHESIS)
+		if self.token != COMMA {
+			break
+		}
+		self.expectToken(COMMA)
+	}
+	return insertStatement
 }
 
 func (self *Parser) parseDeleteStatement() ast.Statement {

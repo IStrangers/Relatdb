@@ -15,6 +15,10 @@ func TestParser(t *testing.T) {
 		DROP DATABASE myBase;
 		DROP TABLE myBase.User;
 		DROP INDEX index_name ON myBase.User;
+		INSERT INTO myBase.User (name,age,address) VALUES 
+		("名称1",1,'地址1'),
+		("名称2",2,'地址2'),
+		("名称3",3,'地址3');
 	`, true, true)
 	statements := parser.Parse()
 	println(statements)
