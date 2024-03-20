@@ -12,6 +12,32 @@ type _DDLStatement_ struct {
 func (self *_DDLStatement_) ddlStatement() {
 }
 
+type ColumnDefinition struct {
+	_Statement_
+
+	Name         Expression
+	Type         byte           //字段类型
+	Flag         uint           //字段标记: NotNull, Unsigned, PriKey
+	Length       int            //字段长度
+	Decimal      int            //小数位数
+	DefaultValue Expression     //默认值
+	Comment      *StringLiteral //注释
+}
+
+func (self *ColumnDefinition) StartIndex() uint64 {
+	return self.Name.StartIndex()
+}
+
+func (self *ColumnDefinition) EndIndex() uint64 {
+	if self.Comment != nil {
+		return self.Comment.EndIndex()
+	}
+	if self.DefaultValue != nil {
+		return self.DefaultValue.EndIndex()
+	}
+	return self.Name.EndIndex()
+}
+
 type CreateDatabaseStatement struct {
 	_DDLStatement_
 

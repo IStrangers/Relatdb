@@ -79,7 +79,10 @@ func (self *Parser) parseColumnDefinitions() (columnDefinitions []*ColumnDefinit
 }
 
 func (self *Parser) parseColumnDefinition() *ColumnDefinition {
-	return &ColumnDefinition{}
+	columnDefinition := &ColumnDefinition{
+		Name: self.parseStringLiteralOrIdentifier(),
+	}
+	return columnDefinition
 }
 
 func (self *Parser) parseCreateIndexStatement(createIndex uint64) Statement {
