@@ -24,6 +24,14 @@ func (self *Parser) parseStatement() ast.Statement {
 	}
 }
 
+func (self *Parser) parseStatements() (statements []ast.Statement) {
+	for self.token != EOF {
+		statements = append(statements, self.parseStatement())
+		self.expectEqualsToken(SEMICOLON)
+	}
+	return
+}
+
 func (self *Parser) parseCreateStatement() ast.Statement {
 	createIndex := self.expect(CREATE)
 	switch self.token {
@@ -31,7 +39,7 @@ func (self *Parser) parseCreateStatement() ast.Statement {
 		return self.parseCreateDatabaseStatement(createIndex)
 	case TABLE:
 		return self.parseCreateTableStatement(createIndex)
-	case INDEX:
+	case INDEX, UNIQUE, SPATIAL, FULLTEXT:
 		return self.parseCreateIndexStatement(createIndex)
 	default:
 		self.errorUnexpectedToken(self.token)
@@ -55,10 +63,12 @@ func (self *Parser) parseCreateTableStatement(createIndex uint64) ast.Statement 
 		IfNotExists:       self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
 		Name:              self.parseTableName(),
 		ColumnDefinitions: self.parseColumnDefinitions(),
+		RightParenthesis:  self.expect(RIGHT_PARENTHESIS),
 	}
 }
 
 func (self *Parser) parseColumnDefinitions() (columnDefinitions []*ast.ColumnDefinition) {
+	self.expectToken(LEFT_PARENTHESIS)
 	for self.token != RIGHT_PARENTHESIS && self.token != EOF {
 		columnDefinitions = append(columnDefinitions, self.parseColumnDefinition())
 		self.expectEqualsToken(COMMA)
@@ -74,7 +84,7 @@ func (self *Parser) parseCreateIndexStatement(createIndex uint64) ast.Statement 
 	indexType := ast.IndexTypeNone
 	if self.token != INDEX {
 		switch self.token {
-		case UNION:
+		case UNIQUE:
 			indexType = ast.IndexTypeUnique
 		case SPATIAL:
 			indexType = ast.IndexTypeSpatial
@@ -86,14 +96,18 @@ func (self *Parser) parseCreateIndexStatement(createIndex uint64) ast.Statement 
 		self.expectToken(self.token)
 	}
 	self.expectToken(INDEX)
-	return &ast.CreateIndexStatement{
+	createIndexStatement := &ast.CreateIndexStatement{
 		CreateIndex: createIndex,
 		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
 		Name:        self.parseStringLiteralOrIdentifier(),
-		TableName:   self.parseTableName(),
-		ColumnNames: self.parseColumnNames(),
 		Type:        indexType,
 	}
+	self.expectToken(ON)
+	createIndexStatement.TableName = self.parseTableName()
+	self.expectToken(LEFT_PARENTHESIS)
+	createIndexStatement.ColumnNames = self.parseColumnNames()
+	self.expectToken(RIGHT_PARENTHESIS)
+	return createIndexStatement
 }
 
 func (self *Parser) parseDropStatement() ast.Statement {

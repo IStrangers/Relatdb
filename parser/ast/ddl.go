@@ -51,6 +51,7 @@ type CreateTableStatement struct {
 	IfNotExists       bool
 	Name              *TableName
 	ColumnDefinitions []*ColumnDefinition
+	RightParenthesis  uint64
 }
 
 func (self *CreateTableStatement) StartIndex() uint64 {
@@ -58,7 +59,7 @@ func (self *CreateTableStatement) StartIndex() uint64 {
 }
 
 func (self *CreateTableStatement) EndIndex() uint64 {
-	return self.Name.EndIndex()
+	return self.RightParenthesis
 }
 
 type DropTableStatement struct {

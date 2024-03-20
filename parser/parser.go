@@ -33,9 +33,9 @@ func CreateParser(baseOffset uint64, content string, skipComment bool, skipWhite
 	}
 }
 
-func (self *Parser) Parse() ast.Node {
+func (self *Parser) Parse() []ast.Statement {
 	self.next()
-	return self.parseStatement()
+	return self.parseStatements()
 }
 
 func (self *Parser) ScanNextToken() (Token, string, string, uint64) {

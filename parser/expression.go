@@ -108,8 +108,12 @@ func (self *Parser) parseTableName() *ast.TableName {
 }
 
 func (self *Parser) parseTableNames() (names []*ast.TableName) {
-	for self.token == COMMA {
+	for {
 		names = append(names, self.parseTableName())
+		if self.token != COMMA {
+			break
+		}
+		self.expectToken(COMMA)
 	}
 	return
 }
@@ -131,8 +135,12 @@ func (self *Parser) parseColumnName() *ast.ColumnName {
 }
 
 func (self *Parser) parseColumnNames() (names []*ast.ColumnName) {
-	for self.token == COMMA {
+	for {
 		names = append(names, self.parseColumnName())
+		if self.token != COMMA {
+			break
+		}
+		self.expectToken(COMMA)
 	}
 	return
 }
