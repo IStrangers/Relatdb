@@ -116,3 +116,7 @@ func (self *Parser) restoreParseState(parseState *ParseState) {
 func (self *Parser) errorUnexpectedToken(tkn Token) {
 	panic(fmt.Sprintf("Unexpected token %v", tkn))
 }
+
+func (self *Parser) errorUnexpectedMsg(msg string) {
+	panic(msg)
+}

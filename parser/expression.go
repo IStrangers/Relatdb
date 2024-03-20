@@ -23,16 +23,16 @@ func (self *Parser) parseExpression() ast.Expression {
 	}
 }
 
-func (parser *Parser) parseNumberLiteral() ast.Expression {
-	defer parser.expect(NUMBER)
+func (self *Parser) parseNumberLiteral() ast.Expression {
+	defer self.expect(NUMBER)
 	return &ast.NumberLiteral{
-		Index:   parser.index,
-		Literal: parser.literal,
-		Value:   parser.parseNumberLiteralValue(parser.value),
+		Index:   self.index,
+		Literal: self.literal,
+		Value:   self.parseNumberLiteralValue(self.value),
 	}
 }
 
-func (parser *Parser) parseNumberLiteralValue(literal string) any {
+func (self *Parser) parseNumberLiteralValue(literal string) any {
 	var value any = 0
 	updateValue := func(v any, err error) bool {
 		if err != nil {
@@ -52,31 +52,32 @@ func (parser *Parser) parseNumberLiteralValue(literal string) any {
 	return value
 }
 
-func (parser *Parser) parseStringLiteral() ast.Expression {
-	defer parser.expectToken(STRING)
+func (self *Parser) parseStringLiteral() ast.Expression {
+	defer self.expectToken(STRING)
 	return &ast.StringLiteral{
-		Index:   parser.index,
-		Literal: parser.literal,
-		Value:   parser.value,
+		Index:   self.index,
+		Literal: self.literal,
+		Value:   self.value,
 	}
 }
 
-func (parser *Parser) parseBooleanLiteral() ast.Expression {
-	defer parser.expectToken(BOOLEAN)
+func (self *Parser) parseBooleanLiteral() ast.Expression {
+	defer self.expectToken(BOOLEAN)
 	return &ast.BooleanLiteral{
-		Index: parser.index,
-		Value: parser.value == "true",
+		Index: self.index,
+		Value: self.value == "true",
 	}
 }
 
-func (parser *Parser) parseNullLiteral() ast.Expression {
-	defer parser.expectToken(NULL)
+func (self *Parser) parseNullLiteral() ast.Expression {
+	defer self.expectToken(NULL)
 	return &ast.NullLiteral{
-		Index: parser.index,
+		Index: self.index,
 	}
 }
 
 func (self *Parser) parseIdentifier() *ast.Identifier {
+	defer self.expectToken(IDENTIFIER)
 	return &ast.Identifier{
 		Index: self.index,
 		Name:  self.value,
@@ -109,6 +110,29 @@ func (self *Parser) parseTableName() *ast.TableName {
 func (self *Parser) parseTableNames() (names []*ast.TableName) {
 	for self.token == COMMA {
 		names = append(names, self.parseTableName())
+	}
+	return
+}
+
+func (self *Parser) parseColumnName() *ast.ColumnName {
+	columnName := &ast.ColumnName{
+		Name: self.parseStringLiteralOrIdentifier(),
+	}
+	if self.expectEqualsToken(DOT) {
+		columnName.Table = columnName.Name
+		columnName.Name = self.parseStringLiteralOrIdentifier()
+	}
+	if self.expectEqualsToken(DOT) {
+		columnName.Schema = columnName.Table
+		columnName.Table = columnName.Name
+		columnName.Name = self.parseStringLiteralOrIdentifier()
+	}
+	return columnName
+}
+
+func (self *Parser) parseColumnNames() (names []*ast.ColumnName) {
+	for self.token == COMMA {
+		names = append(names, self.parseColumnName())
 	}
 	return
 }

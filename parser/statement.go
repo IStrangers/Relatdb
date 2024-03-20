@@ -1,6 +1,9 @@
 package parser
 
-import "Relatdb/parser/ast"
+import (
+	"Relatdb/parser/ast"
+	"fmt"
+)
 
 func (self *Parser) parseStatement() ast.Statement {
 	switch self.token {
@@ -48,19 +51,48 @@ func (self *Parser) parseCreateDatabaseStatement(createIndex uint64) ast.Stateme
 func (self *Parser) parseCreateTableStatement(createIndex uint64) ast.Statement {
 	self.expectToken(TABLE)
 	return &ast.CreateTableStatement{
-		CreateIndex: createIndex,
-		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
-		Name:        self.parseTableName(),
+		CreateIndex:       createIndex,
+		IfNotExists:       self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
+		Name:              self.parseTableName(),
+		ColumnDefinitions: self.parseColumnDefinitions(),
 	}
 }
 
+func (self *Parser) parseColumnDefinitions() (columnDefinitions []*ast.ColumnDefinition) {
+	for self.token != RIGHT_PARENTHESIS && self.token != EOF {
+		columnDefinitions = append(columnDefinitions, self.parseColumnDefinition())
+		self.expectEqualsToken(COMMA)
+	}
+	return
+}
+
+func (self *Parser) parseColumnDefinition() *ast.ColumnDefinition {
+	return &ast.ColumnDefinition{}
+}
+
 func (self *Parser) parseCreateIndexStatement(createIndex uint64) ast.Statement {
+	indexType := ast.IndexTypeNone
+	if self.token != INDEX {
+		switch self.token {
+		case UNION:
+			indexType = ast.IndexTypeUnique
+		case SPATIAL:
+			indexType = ast.IndexTypeSpatial
+		case FULLTEXT:
+			indexType = ast.IndexTypeFullText
+		default:
+			self.errorUnexpectedMsg(fmt.Sprintf("Unexpected index type: %v", self.token))
+		}
+		self.expectToken(self.token)
+	}
 	self.expectToken(INDEX)
 	return &ast.CreateIndexStatement{
 		CreateIndex: createIndex,
 		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
 		Name:        self.parseStringLiteralOrIdentifier(),
 		TableName:   self.parseTableName(),
+		ColumnNames: self.parseColumnNames(),
+		Type:        indexType,
 	}
 }
 

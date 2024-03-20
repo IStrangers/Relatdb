@@ -66,6 +66,9 @@ const (
 	DATABASE // database
 	TABLE    // table
 	INDEX    // index
+	UNIQUE   // unique
+	SPATIAL  // spatial
+	FULLTEXT // fulltext
 	DROP     // drop
 	INTO     // into
 	VALUES   // values
@@ -159,6 +162,9 @@ var tokenStringMap = [...]string{
 	DATABASE: "database",
 	TABLE:    "table",
 	INDEX:    "index",
+	UNIQUE:   "unique",
+	SPATIAL:  "spatial",
+	FULLTEXT: "fulltext",
 	DROP:     "drop",
 	INSERT:   "insert",
 	DELETE:   "delete",
@@ -203,6 +209,9 @@ var keywordMap = map[string]Token{
 	"database": DATABASE,
 	"table":    TABLE,
 	"index":    INDEX,
+	"unique":   UNIQUE,
+	"spatial":  SPATIAL,
+	"fulltext": FULLTEXT,
 	"drop":     DROP,
 	"insert":   INSERT,
 	"delete":   DELETE,
