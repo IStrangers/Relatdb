@@ -21,6 +21,7 @@ func TestParser(t *testing.T) {
 		("名称3",3,'地址3');
 		DELETE FROM myBase.User WHERE name = '名称' or age > 20 and addres != '地址' ORDER BY age DESC LIMIT 0,10;
 		UPDATE myBase.User SET name = '更新名称',age = 1 WHERE name = '名称' ORDER BY age DESC LIMIT 0,10;
+		SELECT CONNECTION_ID();
 	`, true, true)
 	statements := parser.Parse()
 	println(statements)

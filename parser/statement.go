@@ -235,7 +235,7 @@ func (self *Parser) parseSelectStatement() Statement {
 		Fields:      self.parseSelectFields(),
 	}
 	if self.expectEqualsToken(FROM) {
-		selectStatement.From = nil
+		selectStatement.From = self.parseTableRefsClause()
 	}
 	if self.expectEqualsToken(WHERE) {
 		selectStatement.Where = self.parseWhereExpression()
@@ -247,6 +247,12 @@ func (self *Parser) parseSelectStatement() Statement {
 		selectStatement.Limit = self.parseLimit()
 	}
 	return selectStatement
+}
+
+func (self *Parser) parseTableRefsClause() *TableRefsClause {
+	return &TableRefsClause{
+		TableRefs: self.parseJoin(),
+	}
 }
 
 func (self *Parser) parseSelectField() *SelectField {

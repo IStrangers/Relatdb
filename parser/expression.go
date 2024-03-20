@@ -274,6 +274,29 @@ func (self *Parser) parseStringLiteralOrIdentifier() Expression {
 	}
 }
 
+func (self *Parser) parseCallExpression(left Expression) Expression {
+	leftParenthesis, arguments, rightParenthesis := self.parseArguments()
+	return &CallExpression{
+		Callee:           left,
+		LeftParenthesis:  leftParenthesis,
+		Arguments:        arguments,
+		RightParenthesis: rightParenthesis,
+	}
+}
+
+func (self *Parser) parseArguments() (leftParenthesis uint64, arguments []Expression, rightParenthesis uint64) {
+	leftParenthesis = self.expect(LEFT_PARENTHESIS)
+	for self.token != RIGHT_PARENTHESIS {
+		arguments = append(arguments, self.parseExpression())
+		if self.token != COMMA {
+			break
+		}
+		self.expect(COMMA)
+	}
+	rightParenthesis = self.expect(RIGHT_PARENTHESIS)
+	return
+}
+
 func (self *Parser) parseTableName() *TableName {
 	tableName := &TableName{
 		Name: self.parseStringLiteralOrIdentifier(),
@@ -330,25 +353,7 @@ func (self *Parser) parseWhereExpression() Expression {
 	return expr
 }
 
-func (self *Parser) parseCallExpression(left Expression) Expression {
-	leftParenthesis, arguments, rightParenthesis := self.parseArguments()
-	return &CallExpression{
-		Callee:           left,
-		LeftParenthesis:  leftParenthesis,
-		Arguments:        arguments,
-		RightParenthesis: rightParenthesis,
-	}
-}
-
-func (self *Parser) parseArguments() (leftParenthesis uint64, arguments []Expression, rightParenthesis uint64) {
-	leftParenthesis = self.expect(LEFT_PARENTHESIS)
-	for self.token != RIGHT_PARENTHESIS {
-		arguments = append(arguments, self.parseExpression())
-		if self.token != COMMA {
-			break
-		}
-		self.expect(COMMA)
-	}
-	rightParenthesis = self.expect(RIGHT_PARENTHESIS)
-	return
+func (self *Parser) parseJoin() *Join {
+	join := &Join{}
+	return join
 }
