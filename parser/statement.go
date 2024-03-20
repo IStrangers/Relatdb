@@ -145,12 +145,14 @@ func (self *Parser) parseDropTableStatement(dropIndex uint64) ast.Statement {
 
 func (self *Parser) parseDropIndexStatement(dropIndex uint64) ast.Statement {
 	self.expectToken(INDEX)
-	return &ast.DropIndexStatement{
+	dropIndexStatement := &ast.DropIndexStatement{
 		DropIndex: dropIndex,
 		IfExists:  self.expectEqualsToken(IF) && self.expectEqualsToken(EXISTS),
-		TableName: self.parseTableName(),
 		Name:      self.parseStringLiteralOrIdentifier(),
 	}
+	self.expectToken(ON)
+	dropIndexStatement.TableName = self.parseTableName()
+	return dropIndexStatement
 }
 
 func (self *Parser) parseInsertStatement() ast.Statement {

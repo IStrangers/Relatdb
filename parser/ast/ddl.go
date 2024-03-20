@@ -111,8 +111,8 @@ type DropIndexStatement struct {
 
 	DropIndex uint64
 	IfExists  bool
-	TableName *TableName
 	Name      Expression
+	TableName *TableName
 }
 
 func (self *DropIndexStatement) StartIndex() uint64 {
@@ -120,5 +120,5 @@ func (self *DropIndexStatement) StartIndex() uint64 {
 }
 
 func (self *DropIndexStatement) EndIndex() uint64 {
-	return self.Name.EndIndex()
+	return self.TableName.EndIndex()
 }
