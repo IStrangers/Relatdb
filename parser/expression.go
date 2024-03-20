@@ -84,6 +84,14 @@ func (self *Parser) parseIdentifier() *ast.Identifier {
 	}
 }
 
+func (self *Parser) parseKeyWordIdentifier(keyword Token) *ast.Identifier {
+	defer self.expectToken(keyword)
+	return &ast.Identifier{
+		Index: self.index,
+		Name:  self.value,
+	}
+}
+
 func (self *Parser) parseStringLiteralOrIdentifier() ast.Expression {
 	switch self.token {
 	case STRING:

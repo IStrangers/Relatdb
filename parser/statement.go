@@ -183,7 +183,21 @@ func (self *Parser) parseInsertStatement() ast.Statement {
 }
 
 func (self *Parser) parseDeleteStatement() ast.Statement {
-	return nil
+	deleteStatement := &ast.DeleteStatement{
+		DeleteIndex: self.expect(DELETE),
+	}
+	self.expectToken(FROM)
+	deleteStatement.TableName = self.parseTableName()
+	if self.expectEqualsToken(WHERE) {
+		deleteStatement.Where = self.parseExpression()
+	}
+	if self.token == ORDER {
+		deleteStatement.Order = self.parseOrderByClause()
+	}
+	if self.token == LIMIT {
+		deleteStatement.Limit = self.parseLimit()
+	}
+	return deleteStatement
 }
 
 func (self *Parser) parseUpdateStatement() ast.Statement {
@@ -192,6 +206,50 @@ func (self *Parser) parseUpdateStatement() ast.Statement {
 
 func (self *Parser) parseSelectStatement() ast.Statement {
 	return nil
+}
+
+func (self *Parser) parseOrderByClause() *ast.OrderByClause {
+	orderByClause := &ast.OrderByClause{
+		OrderByIndex: self.expect(ORDER),
+	}
+	self.expectToken(BY)
+	orderByClause.Items = self.parseOrderItems()
+	return orderByClause
+}
+
+func (self *Parser) parseOrderItem() *ast.OrderItem {
+	orderItem := &ast.OrderItem{
+		ColumnName: self.parseColumnName(),
+		Desc:       false,
+	}
+	if self.token == AES || self.token == DESC {
+		orderItem.Desc = self.token == DESC
+		orderItem.Order = self.parseKeyWordIdentifier(self.token)
+	}
+	return orderItem
+}
+
+func (self *Parser) parseOrderItems() (orderItems []*ast.OrderItem) {
+	for {
+		orderItems = append(orderItems, self.parseOrderItem())
+		if self.token != COMMA {
+			break
+		}
+		self.expectToken(COMMA)
+	}
+	return
+}
+
+func (self *Parser) parseLimit() *ast.Limit {
+	limit := &ast.Limit{
+		LimitIndex: self.expect(LIMIT),
+		Count:      self.parseExpression(),
+	}
+	if self.expectEqualsToken(COMMA) {
+		limit.Offset = limit.Count
+		limit.Count = self.parseExpression()
+	}
+	return limit
 }
 
 func (self *Parser) parseExpressionStatement() ast.Statement {

@@ -318,6 +318,7 @@ type OrderItem struct {
 
 	ColumnName *ColumnName
 	Order      *Identifier
+	Desc       bool
 }
 
 func (self *OrderItem) StartIndex() uint64 {
