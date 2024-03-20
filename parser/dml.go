@@ -62,7 +62,7 @@ type UpdateStatement struct {
 
 	UpdateIndex       uint64
 	TableName         *TableName
-	AssignmentColumns []*AssignExpression
+	AssignExpressions []Expression
 	Where             Expression
 	Order             *OrderByClause
 	Limit             *Limit

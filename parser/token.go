@@ -83,6 +83,7 @@ const (
 	ORDER    // order
 	LIMIT    // limit
 	AS       // as
+	SET      // set
 	BY       // by
 	AES      // aes
 	DESC     // desc
@@ -177,6 +178,7 @@ var tokenStringMap = [...]string{
 	ORDER:    "order",
 	LIMIT:    "limit",
 	AS:       "as",
+	SET:      "set",
 	BY:       "by",
 	AES:      "aes",
 	DESC:     "desc",
@@ -224,6 +226,7 @@ var keywordMap = map[string]Token{
 	"order":    ORDER,
 	"limit":    LIMIT,
 	"as":       AS,
+	"set":      SET,
 	"by":       BY,
 	"aes":      AES,
 	"desc":     DESC,

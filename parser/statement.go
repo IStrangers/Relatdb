@@ -203,7 +203,28 @@ func (self *Parser) parseDeleteStatement() Statement {
 }
 
 func (self *Parser) parseUpdateStatement() Statement {
-	return nil
+	updateStatement := &UpdateStatement{
+		UpdateIndex: self.expect(UPDATE),
+		TableName:   self.parseTableName(),
+	}
+	self.expectToken(SET)
+	for {
+		updateStatement.AssignExpressions = append(updateStatement.AssignExpressions, self.parseAssignExpression())
+		if self.token != COMMA {
+			break
+		}
+		self.expectToken(COMMA)
+	}
+	if self.expectEqualsToken(WHERE) {
+		updateStatement.Where = self.parseWhereExpression()
+	}
+	if self.token == ORDER {
+		updateStatement.Order = self.parseOrderByClause()
+	}
+	if self.token == LIMIT {
+		updateStatement.Limit = self.parseLimit()
+	}
+	return updateStatement
 }
 
 func (self *Parser) parseSelectStatement() Statement {
