@@ -230,7 +230,44 @@ func (self *Parser) parseUpdateStatement() Statement {
 func (self *Parser) parseSelectStatement() Statement {
 	defer func() { self.scope.inSelect = false }()
 	self.scope.inSelect = true
-	return nil
+	selectStatement := &SelectStatement{
+		SelectIndex: self.expect(SELECT),
+		Fields:      self.parseSelectFields(),
+	}
+	if self.expectEqualsToken(FROM) {
+		selectStatement.From = nil
+	}
+	if self.expectEqualsToken(WHERE) {
+		selectStatement.Where = self.parseWhereExpression()
+	}
+	if self.token == ORDER {
+		selectStatement.Order = self.parseOrderByClause()
+	}
+	if self.token == LIMIT {
+		selectStatement.Limit = self.parseLimit()
+	}
+	return selectStatement
+}
+
+func (self *Parser) parseSelectField() *SelectField {
+	selectField := &SelectField{
+		Expr: self.parseExpression(),
+	}
+	if self.expectEqualsToken(AS) {
+		selectField.AsName = self.parseStringLiteralOrIdentifier()
+	}
+	return selectField
+}
+
+func (self *Parser) parseSelectFields() (selectFields []*SelectField) {
+	for {
+		selectFields = append(selectFields, self.parseSelectField())
+		if self.token != COMMA {
+			break
+		}
+		self.expectToken(COMMA)
+	}
+	return
 }
 
 func (self *Parser) parseOrderByClause() *OrderByClause {
