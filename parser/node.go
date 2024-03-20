@@ -1,4 +1,4 @@
-package ast
+package parser
 
 type Node interface {
 	StartIndex() uint64
@@ -131,19 +131,71 @@ func (self *Identifier) EndIndex() uint64 {
 	return self.Index + uint64(len(self.Name))
 }
 
-type Assignment struct {
+type AssignExpression struct {
 	_Expression_
 
-	Left  Expression
-	Right Expression
+	Left     Expression
+	Operator Token
+	Right    Expression
 }
 
-func (self *Assignment) StartIndex() uint64 {
+func (self *AssignExpression) StartIndex() uint64 {
 	return self.Left.StartIndex()
 }
 
-func (self *Assignment) EndIndex() uint64 {
+func (self *AssignExpression) EndIndex() uint64 {
 	return self.Right.EndIndex()
+}
+
+type BinaryExpression struct {
+	_Expression_
+	Left       Expression
+	Operator   Token
+	Right      Expression
+	Comparison bool
+}
+
+func (self *BinaryExpression) StartIndex() uint64 {
+	return self.Left.StartIndex()
+}
+
+func (self *BinaryExpression) EndIndex() uint64 {
+	return self.Right.EndIndex()
+}
+
+type UnaryExpression struct {
+	_Expression_
+	Index    uint64
+	Operator Token
+	Operand  Expression
+	Postfix  bool
+}
+
+func (self *UnaryExpression) StartIndex() uint64 {
+	return self.Index
+}
+
+func (self *UnaryExpression) EndIndex() uint64 {
+	if self.Postfix {
+		return self.Operand.EndIndex() + 2
+	}
+	return self.Operand.EndIndex()
+}
+
+type CallExpression struct {
+	_Expression_
+	Callee           Expression
+	LeftParenthesis  uint64
+	Arguments        []Expression
+	RightParenthesis uint64
+}
+
+func (self *CallExpression) StartIndex() uint64 {
+	return self.Callee.StartIndex()
+}
+
+func (self *CallExpression) EndIndex() uint64 {
+	return self.RightParenthesis + 1
 }
 
 type TableName struct {

@@ -1,4 +1,4 @@
-package ast
+package parser
 
 type DMLStatement interface {
 	Statement
@@ -62,7 +62,7 @@ type UpdateStatement struct {
 
 	UpdateIndex       uint64
 	TableName         *TableName
-	AssignmentColumns []*Assignment
+	AssignmentColumns []*AssignExpression
 	Where             Expression
 	Order             *OrderByClause
 	Limit             *Limit

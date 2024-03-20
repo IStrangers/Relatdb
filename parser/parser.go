@@ -1,10 +1,16 @@
 package parser
 
 import (
-	"Relatdb/parser/ast"
 	"fmt"
 	"strings"
 )
+
+type Scope struct {
+	outer *Scope
+
+	inSelect bool
+	inWhere  bool
+}
 
 type Parser struct {
 	baseOffset     uint64
@@ -20,6 +26,8 @@ type Parser struct {
 	literal   string
 	value     string
 	index     uint64
+
+	scope *Scope
 }
 
 func CreateParser(baseOffset uint64, content string, skipComment bool, skipWhiteSpace bool) *Parser {
@@ -33,7 +41,22 @@ func CreateParser(baseOffset uint64, content string, skipComment bool, skipWhite
 	}
 }
 
-func (self *Parser) Parse() []ast.Statement {
+func (self *Parser) openScope() {
+	self.scope = &Scope{
+		outer: self.scope,
+	}
+	scope := self.scope
+	outer := self.scope.outer
+	if outer != nil {
+		scope.inSelect, scope.inWhere = outer.inSelect, outer.inWhere
+	}
+}
+
+func (self *Parser) closeScope() {
+	self.scope = self.scope.outer
+}
+
+func (self *Parser) Parse() []Statement {
 	self.next()
 	return self.parseStatements()
 }

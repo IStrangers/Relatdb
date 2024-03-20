@@ -19,7 +19,7 @@ func TestParser(t *testing.T) {
 		("名称1",1,'地址1'),
 		("名称2",2,'地址2'),
 		("名称3",3,'地址3');
-		DELETE FROM myBase.User WHERE 1 ORDER BY age DESC LIMIT 0,10;
+		DELETE FROM myBase.User WHERE name = '名称' or age > 20 and addres != '地址' ORDER BY age DESC LIMIT 0,10;
 	`, true, true)
 	statements := parser.Parse()
 	println(statements)

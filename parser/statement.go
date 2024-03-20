@@ -1,11 +1,13 @@
 package parser
 
 import (
-	"Relatdb/parser/ast"
 	"fmt"
 )
 
-func (self *Parser) parseStatement() ast.Statement {
+func (self *Parser) parseStatement() Statement {
+	defer self.closeScope()
+	self.openScope()
+
 	switch self.token {
 	case CREATE:
 		return self.parseCreateStatement()
@@ -24,7 +26,7 @@ func (self *Parser) parseStatement() ast.Statement {
 	}
 }
 
-func (self *Parser) parseStatements() (statements []ast.Statement) {
+func (self *Parser) parseStatements() (statements []Statement) {
 	for self.token != EOF {
 		statements = append(statements, self.parseStatement())
 		self.expectEqualsToken(SEMICOLON)
@@ -32,7 +34,7 @@ func (self *Parser) parseStatements() (statements []ast.Statement) {
 	return
 }
 
-func (self *Parser) parseCreateStatement() ast.Statement {
+func (self *Parser) parseCreateStatement() Statement {
 	createIndex := self.expect(CREATE)
 	switch self.token {
 	case DATABASE:
@@ -47,18 +49,18 @@ func (self *Parser) parseCreateStatement() ast.Statement {
 	}
 }
 
-func (self *Parser) parseCreateDatabaseStatement(createIndex uint64) ast.Statement {
+func (self *Parser) parseCreateDatabaseStatement(createIndex uint64) Statement {
 	self.expectToken(DATABASE)
-	return &ast.CreateDatabaseStatement{
+	return &CreateDatabaseStatement{
 		CreateIndex: createIndex,
 		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
 		Name:        self.parseStringLiteralOrIdentifier(),
 	}
 }
 
-func (self *Parser) parseCreateTableStatement(createIndex uint64) ast.Statement {
+func (self *Parser) parseCreateTableStatement(createIndex uint64) Statement {
 	self.expectToken(TABLE)
-	return &ast.CreateTableStatement{
+	return &CreateTableStatement{
 		CreateIndex:       createIndex,
 		IfNotExists:       self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
 		Name:              self.parseTableName(),
@@ -67,7 +69,7 @@ func (self *Parser) parseCreateTableStatement(createIndex uint64) ast.Statement 
 	}
 }
 
-func (self *Parser) parseColumnDefinitions() (columnDefinitions []*ast.ColumnDefinition) {
+func (self *Parser) parseColumnDefinitions() (columnDefinitions []*ColumnDefinition) {
 	self.expectToken(LEFT_PARENTHESIS)
 	for self.token != RIGHT_PARENTHESIS && self.token != EOF {
 		columnDefinitions = append(columnDefinitions, self.parseColumnDefinition())
@@ -76,27 +78,27 @@ func (self *Parser) parseColumnDefinitions() (columnDefinitions []*ast.ColumnDef
 	return
 }
 
-func (self *Parser) parseColumnDefinition() *ast.ColumnDefinition {
-	return &ast.ColumnDefinition{}
+func (self *Parser) parseColumnDefinition() *ColumnDefinition {
+	return &ColumnDefinition{}
 }
 
-func (self *Parser) parseCreateIndexStatement(createIndex uint64) ast.Statement {
-	indexType := ast.IndexTypeNone
+func (self *Parser) parseCreateIndexStatement(createIndex uint64) Statement {
+	indexType := IndexTypeNone
 	if self.token != INDEX {
 		switch self.token {
 		case UNIQUE:
-			indexType = ast.IndexTypeUnique
+			indexType = IndexTypeUnique
 		case SPATIAL:
-			indexType = ast.IndexTypeSpatial
+			indexType = IndexTypeSpatial
 		case FULLTEXT:
-			indexType = ast.IndexTypeFullText
+			indexType = IndexTypeFullText
 		default:
 			self.errorUnexpectedMsg(fmt.Sprintf("Unexpected index type: %v", self.token))
 		}
 		self.expectToken(self.token)
 	}
 	self.expectToken(INDEX)
-	createIndexStatement := &ast.CreateIndexStatement{
+	createIndexStatement := &CreateIndexStatement{
 		CreateIndex: createIndex,
 		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
 		Name:        self.parseStringLiteralOrIdentifier(),
@@ -110,7 +112,7 @@ func (self *Parser) parseCreateIndexStatement(createIndex uint64) ast.Statement 
 	return createIndexStatement
 }
 
-func (self *Parser) parseDropStatement() ast.Statement {
+func (self *Parser) parseDropStatement() Statement {
 	dropIndex := self.expect(DROP)
 	switch self.token {
 	case DATABASE:
@@ -125,27 +127,27 @@ func (self *Parser) parseDropStatement() ast.Statement {
 	}
 }
 
-func (self *Parser) parseDropDatabaseStatement(dropIndex uint64) ast.Statement {
+func (self *Parser) parseDropDatabaseStatement(dropIndex uint64) Statement {
 	self.expectToken(DATABASE)
-	return &ast.DropDatabaseStatement{
+	return &DropDatabaseStatement{
 		DropIndex: dropIndex,
 		IfExists:  self.expectEqualsToken(IF) && self.expectEqualsToken(EXISTS),
 		Name:      self.parseStringLiteralOrIdentifier(),
 	}
 }
 
-func (self *Parser) parseDropTableStatement(dropIndex uint64) ast.Statement {
+func (self *Parser) parseDropTableStatement(dropIndex uint64) Statement {
 	self.expectToken(TABLE)
-	return &ast.DropTableStatement{
+	return &DropTableStatement{
 		DropIndex: dropIndex,
 		IfExists:  self.expectEqualsToken(IF) && self.expectEqualsToken(EXISTS),
 		Names:     self.parseTableNames(),
 	}
 }
 
-func (self *Parser) parseDropIndexStatement(dropIndex uint64) ast.Statement {
+func (self *Parser) parseDropIndexStatement(dropIndex uint64) Statement {
 	self.expectToken(INDEX)
-	dropIndexStatement := &ast.DropIndexStatement{
+	dropIndexStatement := &DropIndexStatement{
 		DropIndex: dropIndex,
 		IfExists:  self.expectEqualsToken(IF) && self.expectEqualsToken(EXISTS),
 		Name:      self.parseStringLiteralOrIdentifier(),
@@ -155,8 +157,8 @@ func (self *Parser) parseDropIndexStatement(dropIndex uint64) ast.Statement {
 	return dropIndexStatement
 }
 
-func (self *Parser) parseInsertStatement() ast.Statement {
-	insertStatement := &ast.InsertStatement{
+func (self *Parser) parseInsertStatement() Statement {
+	insertStatement := &InsertStatement{
 		InsertIndex: self.expect(INSERT),
 	}
 	self.expectToken(INTO)
@@ -167,7 +169,7 @@ func (self *Parser) parseInsertStatement() ast.Statement {
 	self.expectToken(VALUES)
 	for {
 		self.expectToken(LEFT_PARENTHESIS)
-		var values []ast.Expression
+		var values []Expression
 		for self.token != RIGHT_PARENTHESIS && self.token != EOF {
 			values = append(values, self.parseExpression())
 			self.expectEqualsToken(COMMA)
@@ -182,14 +184,14 @@ func (self *Parser) parseInsertStatement() ast.Statement {
 	return insertStatement
 }
 
-func (self *Parser) parseDeleteStatement() ast.Statement {
-	deleteStatement := &ast.DeleteStatement{
+func (self *Parser) parseDeleteStatement() Statement {
+	deleteStatement := &DeleteStatement{
 		DeleteIndex: self.expect(DELETE),
 	}
 	self.expectToken(FROM)
 	deleteStatement.TableName = self.parseTableName()
 	if self.expectEqualsToken(WHERE) {
-		deleteStatement.Where = self.parseExpression()
+		deleteStatement.Where = self.parseWhereExpression()
 	}
 	if self.token == ORDER {
 		deleteStatement.Order = self.parseOrderByClause()
@@ -200,16 +202,18 @@ func (self *Parser) parseDeleteStatement() ast.Statement {
 	return deleteStatement
 }
 
-func (self *Parser) parseUpdateStatement() ast.Statement {
+func (self *Parser) parseUpdateStatement() Statement {
 	return nil
 }
 
-func (self *Parser) parseSelectStatement() ast.Statement {
+func (self *Parser) parseSelectStatement() Statement {
+	defer func() { self.scope.inSelect = false }()
+	self.scope.inSelect = true
 	return nil
 }
 
-func (self *Parser) parseOrderByClause() *ast.OrderByClause {
-	orderByClause := &ast.OrderByClause{
+func (self *Parser) parseOrderByClause() *OrderByClause {
+	orderByClause := &OrderByClause{
 		OrderByIndex: self.expect(ORDER),
 	}
 	self.expectToken(BY)
@@ -217,8 +221,8 @@ func (self *Parser) parseOrderByClause() *ast.OrderByClause {
 	return orderByClause
 }
 
-func (self *Parser) parseOrderItem() *ast.OrderItem {
-	orderItem := &ast.OrderItem{
+func (self *Parser) parseOrderItem() *OrderItem {
+	orderItem := &OrderItem{
 		ColumnName: self.parseColumnName(),
 		Desc:       false,
 	}
@@ -229,7 +233,7 @@ func (self *Parser) parseOrderItem() *ast.OrderItem {
 	return orderItem
 }
 
-func (self *Parser) parseOrderItems() (orderItems []*ast.OrderItem) {
+func (self *Parser) parseOrderItems() (orderItems []*OrderItem) {
 	for {
 		orderItems = append(orderItems, self.parseOrderItem())
 		if self.token != COMMA {
@@ -240,8 +244,8 @@ func (self *Parser) parseOrderItems() (orderItems []*ast.OrderItem) {
 	return
 }
 
-func (self *Parser) parseLimit() *ast.Limit {
-	limit := &ast.Limit{
+func (self *Parser) parseLimit() *Limit {
+	limit := &Limit{
 		LimitIndex: self.expect(LIMIT),
 		Count:      self.parseExpression(),
 	}
@@ -252,8 +256,8 @@ func (self *Parser) parseLimit() *ast.Limit {
 	return limit
 }
 
-func (self *Parser) parseExpressionStatement() ast.Statement {
-	return &ast.ExpressionStatement{
+func (self *Parser) parseExpressionStatement() Statement {
+	return &ExpressionStatement{
 		Expr: self.parseExpression(),
 	}
 }
