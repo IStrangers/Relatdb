@@ -360,12 +360,18 @@ func (self *Parser) parseJoin() *Join {
 	}
 	switch self.token {
 	case COMMA:
+		self.expectToken(COMMA)
 		join.JoinType = CrossJoin
 	case INNER:
+		self.expectToken(INNER)
 		join.JoinType = InnerJoin
 	case LEFT:
+		self.expectToken(LEFT)
+		self.expectToken(JOIN)
 		join.JoinType = LeftJoin
 	case RIGHT:
+		self.expectToken(RIGHT)
+		self.expectToken(JOIN)
 		join.JoinType = RightJoin
 	}
 	if join.JoinType != 0 {
