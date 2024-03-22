@@ -54,7 +54,7 @@ func (self *Parser) parseCreateDatabaseStatement(createIndex uint64) Statement {
 	return &CreateDatabaseStatement{
 		CreateIndex: createIndex,
 		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
-		Name:        self.parseStringLiteralOrIdentifier(),
+		Name:        self.parseIdentifier(),
 	}
 }
 
@@ -80,7 +80,7 @@ func (self *Parser) parseColumnDefinitions() (columnDefinitions []*ColumnDefinit
 
 func (self *Parser) parseColumnDefinition() *ColumnDefinition {
 	columnDefinition := &ColumnDefinition{
-		Name: self.parseStringLiteralOrIdentifier(),
+		Name: self.parseIdentifier(),
 	}
 	return columnDefinition
 }
@@ -104,7 +104,7 @@ func (self *Parser) parseCreateIndexStatement(createIndex uint64) Statement {
 	createIndexStatement := &CreateIndexStatement{
 		CreateIndex: createIndex,
 		IfNotExists: self.expectEqualsToken(IF) && self.expectEqualsToken(NOT) && self.expectEqualsToken(EXISTS),
-		Name:        self.parseStringLiteralOrIdentifier(),
+		Name:        self.parseIdentifier(),
 		Type:        indexType,
 	}
 	self.expectToken(ON)
@@ -135,7 +135,7 @@ func (self *Parser) parseDropDatabaseStatement(dropIndex uint64) Statement {
 	return &DropDatabaseStatement{
 		DropIndex: dropIndex,
 		IfExists:  self.expectEqualsToken(IF) && self.expectEqualsToken(EXISTS),
-		Name:      self.parseStringLiteralOrIdentifier(),
+		Name:      self.parseIdentifier(),
 	}
 }
 
@@ -153,7 +153,7 @@ func (self *Parser) parseDropIndexStatement(dropIndex uint64) Statement {
 	dropIndexStatement := &DropIndexStatement{
 		DropIndex: dropIndex,
 		IfExists:  self.expectEqualsToken(IF) && self.expectEqualsToken(EXISTS),
-		Name:      self.parseStringLiteralOrIdentifier(),
+		Name:      self.parseIdentifier(),
 	}
 	self.expectToken(ON)
 	dropIndexStatement.TableName = self.parseTableName()
@@ -238,7 +238,7 @@ func (self *Parser) parseSelectStatement() *SelectStatement {
 		Fields:      self.parseSelectFields(),
 	}
 	if self.expectEqualsToken(FROM) {
-		selectStatement.From = self.parseTableRefsClause()
+		selectStatement.From = self.parseResultSet()
 	}
 	if self.expectEqualsToken(WHERE) {
 		selectStatement.Where = self.parseWhereExpression()
@@ -252,18 +252,18 @@ func (self *Parser) parseSelectStatement() *SelectStatement {
 	return selectStatement
 }
 
-func (self *Parser) parseTableRefsClause() *TableRefsClause {
-	return &TableRefsClause{
-		TableRefs: self.parseJoin(),
-	}
-}
-
 func (self *Parser) parseSelectField() *SelectField {
-	selectField := &SelectField{
-		Expr: self.parseExpression(),
+	defer func() { self.scope.inSelectField = false }()
+	self.scope.inSelectField = true
+	selectField := &SelectField{}
+	switch self.token {
+	case MULTIPLY:
+		selectField.Expr = self.parseKeyWordIdentifier(MULTIPLY)
+	default:
+		selectField.Expr = self.parseExpression()
 	}
 	if self.expectEqualsToken(AS) {
-		selectField.AsName = self.parseStringLiteralOrIdentifier()
+		selectField.AsName = self.parseIdentifier()
 	}
 	return selectField
 }

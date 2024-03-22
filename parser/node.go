@@ -36,7 +36,7 @@ type ResultSet interface {
 }
 
 type _ResultSet_ struct {
-	ResultSet
+	_Expression_
 }
 
 func (self *_ResultSet_) resultSet() {

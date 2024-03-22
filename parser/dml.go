@@ -88,20 +88,6 @@ func (self *SelectField) EndIndex() uint64 {
 	return self.Expr.EndIndex()
 }
 
-type TableRefsClause struct {
-	_Statement_
-
-	TableRefs *Join
-}
-
-func (self *TableRefsClause) StartIndex() uint64 {
-	return self.TableRefs.StartIndex()
-}
-
-func (self *TableRefsClause) EndIndex() uint64 {
-	return self.TableRefs.EndIndex()
-}
-
 type JoinType int
 
 const (
@@ -310,7 +296,7 @@ type SelectStatement struct {
 
 	SelectIndex uint64
 	Fields      []*SelectField
-	From        *TableRefsClause
+	From        ResultSet
 	Where       Expression
 	GroupBy     *GroupByClause
 	Having      *HavingClause

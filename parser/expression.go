@@ -167,6 +167,9 @@ func (parser *Parser) parseLeftHandSideExpressionAllowCall(stopTokens []Token) (
 	for !isStopToken(parser.token) {
 		switch parser.token {
 		case LEFT_PARENTHESIS:
+			if columnName, ok := left.(*ColumnName); ok {
+				left = columnName.Name
+			}
 			left = parser.parseCallExpression(left)
 			continue
 		}
@@ -177,21 +180,30 @@ func (parser *Parser) parseLeftHandSideExpressionAllowCall(stopTokens []Token) (
 }
 
 func (self *Parser) parsePrimaryExpression() Expression {
+	var expr Expression
 	switch self.token {
 	case NUMBER:
-		return self.parseNumberLiteral()
+		expr = self.parseNumberLiteral()
 	case STRING:
-		return self.parseStringLiteral()
+		expr = self.parseStringLiteral()
 	case BOOLEAN:
-		return self.parseBooleanLiteral()
+		expr = self.parseBooleanLiteral()
 	case NULL:
-		return self.parseNullLiteral()
+		expr = self.parseNullLiteral()
 	case IDENTIFIER:
-		return self.parseIdentifier()
+		if self.scope.inSelectField || self.scope.inWhere {
+			expr = self.parseColumnName()
+		} else {
+			expr = self.parseIdentifier()
+		}
+	case LEFT_PARENTHESIS:
+		expr = self.parseSubqueryExpression()
 	default:
 		self.errorUnexpectedToken(self.token)
 		return nil
 	}
+
+	return expr
 }
 
 func (self *Parser) parseNumberLiteral() Expression {
@@ -263,18 +275,6 @@ func (self *Parser) parseKeyWordIdentifier(keyword Token) *Identifier {
 	}
 }
 
-func (self *Parser) parseStringLiteralOrIdentifier() Expression {
-	switch self.token {
-	case STRING:
-		return self.parseStringLiteral()
-	case IDENTIFIER:
-		return self.parseIdentifier()
-	default:
-		self.errorUnexpectedToken(self.token)
-		return nil
-	}
-}
-
 func (self *Parser) parseCallExpression(left Expression) Expression {
 	leftParenthesis, arguments, rightParenthesis := self.parseArguments()
 	return &CallExpression{
@@ -300,11 +300,11 @@ func (self *Parser) parseArguments() (leftParenthesis uint64, arguments []Expres
 
 func (self *Parser) parseTableName() *TableName {
 	tableName := &TableName{
-		Name: self.parseStringLiteralOrIdentifier(),
+		Name: self.parseIdentifier(),
 	}
 	if self.expectEqualsToken(DOT) {
 		tableName.Schema = tableName.Name
-		tableName.Name = self.parseStringLiteralOrIdentifier()
+		tableName.Name = self.parseIdentifier()
 	}
 	return tableName
 }
@@ -322,16 +322,16 @@ func (self *Parser) parseTableNames() (names []*TableName) {
 
 func (self *Parser) parseColumnName() *ColumnName {
 	columnName := &ColumnName{
-		Name: self.parseStringLiteralOrIdentifier(),
+		Name: self.parseIdentifier(),
 	}
 	if self.expectEqualsToken(DOT) {
 		columnName.Table = columnName.Name
-		columnName.Name = self.parseStringLiteralOrIdentifier()
+		columnName.Name = self.parseIdentifier()
 	}
 	if self.expectEqualsToken(DOT) {
 		columnName.Schema = columnName.Table
 		columnName.Table = columnName.Name
-		columnName.Name = self.parseStringLiteralOrIdentifier()
+		columnName.Name = self.parseIdentifier()
 	}
 	return columnName
 }
@@ -354,16 +354,44 @@ func (self *Parser) parseWhereExpression() Expression {
 	return expr
 }
 
-func (self *Parser) parseJoin() *Join {
+func (self *Parser) parsePrimaryResultSet() ResultSet {
+	switch self.token {
+	case LEFT_PARENTHESIS:
+		return self.parseSubqueryExpression()
+	case IDENTIFIER:
+		return self.parseTableSource()
+	default:
+		self.errorUnexpectedMsg(fmt.Sprintf("Unexpected result set: %v", self.token))
+		return nil
+	}
+}
+
+func (self *Parser) parseResultSet() ResultSet {
+	left := self.parsePrimaryResultSet()
+
+	for {
+		switch self.token {
+		case COMMA, JOIN, INNER, LEFT, RIGHT:
+			left = self.parseJoin(left)
+		default:
+			return left
+		}
+	}
+}
+
+func (self *Parser) parseJoin(left ResultSet) ResultSet {
 	join := &Join{
-		Left: self.parseResultSet(),
+		Left: left,
 	}
 	switch self.token {
 	case COMMA:
 		self.expectToken(COMMA)
 		join.JoinType = CrossJoin
-	case INNER:
-		self.expectToken(INNER)
+	case JOIN, INNER:
+		if self.token == INNER {
+			self.expectToken(INNER)
+		}
+		self.expectToken(JOIN)
 		join.JoinType = InnerJoin
 	case LEFT:
 		self.expectToken(LEFT)
@@ -375,7 +403,7 @@ func (self *Parser) parseJoin() *Join {
 		join.JoinType = RightJoin
 	}
 	if join.JoinType != 0 {
-		join.Right = self.parseJoin()
+		join.Right = self.parsePrimaryResultSet()
 		if self.token == ON {
 			join.On = self.parseOnCondition()
 		}
@@ -387,18 +415,6 @@ func (self *Parser) parseOnCondition() *OnCondition {
 	self.expectToken(ON)
 	return &OnCondition{
 		Expr: self.parseWhereExpression(),
-	}
-}
-
-func (self *Parser) parseResultSet() ResultSet {
-	switch self.token {
-	case LEFT_PARENTHESIS:
-		return self.parseSubqueryExpression()
-	case STRING, IDENTIFIER:
-		return self.parseTableSource()
-	default:
-		self.errorUnexpectedMsg(fmt.Sprintf("Unexpected result set: %v", self.token))
-		return nil
 	}
 }
 
@@ -416,7 +432,7 @@ func (self *Parser) parseTableSource() ResultSet {
 		TableName: self.parseTableName(),
 	}
 	if self.expectEqualsToken(AS) {
-		tableSource.AsName = self.parseStringLiteralOrIdentifier()
+		tableSource.AsName = self.parseIdentifier()
 	}
 	return tableSource
 }

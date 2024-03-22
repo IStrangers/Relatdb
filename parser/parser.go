@@ -8,8 +8,9 @@ import (
 type Scope struct {
 	outer *Scope
 
-	inSelect bool
-	inWhere  bool
+	inSelect      bool
+	inSelectField bool
+	inWhere       bool
 }
 
 type Parser struct {
