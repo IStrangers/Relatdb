@@ -14,7 +14,6 @@ func (self *_DMLStatement_) dmlStatement() {
 
 type TableName struct {
 	_Expression_
-	_ResultSet_
 
 	Schema Expression
 	Name   Expression
@@ -29,6 +28,24 @@ func (self *TableName) StartIndex() uint64 {
 
 func (self *TableName) EndIndex() uint64 {
 	return self.Name.EndIndex()
+}
+
+type TableSource struct {
+	_ResultSet_
+
+	TableName *TableName
+	AsName    Expression
+}
+
+func (self *TableSource) StartIndex() uint64 {
+	return self.TableName.StartIndex()
+}
+
+func (self *TableSource) EndIndex() uint64 {
+	if self.AsName != nil {
+		return self.AsName.EndIndex()
+	}
+	return self.TableName.EndIndex()
 }
 
 type ColumnName struct {
@@ -89,6 +106,7 @@ type JoinType int
 
 const (
 	CrossJoin JoinType = iota + 1
+	InnerJoin
 	LeftJoin
 	RightJoin
 )
@@ -321,4 +339,24 @@ func (self *SelectStatement) EndIndex() uint64 {
 		return self.Where.EndIndex()
 	}
 	return self.From.EndIndex()
+}
+
+type SubqueryExpression struct {
+	_ResultSet_
+
+	LeftParenthesis  uint64
+	Select           *SelectStatement
+	RightParenthesis uint64
+	AsName           Expression
+}
+
+func (self *SubqueryExpression) StartIndex() uint64 {
+	return self.LeftParenthesis
+}
+
+func (self *SubqueryExpression) EndIndex() uint64 {
+	if self.AsName != nil {
+		return self.AsName.EndIndex()
+	}
+	return self.RightParenthesis
 }

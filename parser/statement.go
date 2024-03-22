@@ -230,7 +230,7 @@ func (self *Parser) parseUpdateStatement() Statement {
 	return updateStatement
 }
 
-func (self *Parser) parseSelectStatement() Statement {
+func (self *Parser) parseSelectStatement() *SelectStatement {
 	defer func() { self.scope.inSelect = false }()
 	self.scope.inSelect = true
 	selectStatement := &SelectStatement{

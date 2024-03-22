@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -354,6 +355,62 @@ func (self *Parser) parseWhereExpression() Expression {
 }
 
 func (self *Parser) parseJoin() *Join {
-	join := &Join{}
+	join := &Join{
+		Left: self.parseResultSet(),
+	}
+	switch self.token {
+	case COMMA:
+		join.JoinType = CrossJoin
+	case INNER:
+		join.JoinType = InnerJoin
+	case LEFT:
+		join.JoinType = LeftJoin
+	case RIGHT:
+		join.JoinType = RightJoin
+	}
+	if join.JoinType != 0 {
+		join.Right = self.parseJoin()
+		if self.token == ON {
+			join.On = self.parseOnCondition()
+		}
+	}
 	return join
+}
+
+func (self *Parser) parseOnCondition() *OnCondition {
+	self.expectToken(ON)
+	return &OnCondition{
+		Expr: self.parseWhereExpression(),
+	}
+}
+
+func (self *Parser) parseResultSet() ResultSet {
+	switch self.token {
+	case LEFT_PARENTHESIS:
+		return self.parseSubqueryExpression()
+	case STRING, IDENTIFIER:
+		return self.parseTableSource()
+	default:
+		self.errorUnexpectedMsg(fmt.Sprintf("Unexpected result set: %v", self.token))
+		return nil
+	}
+}
+
+func (self *Parser) parseSubqueryExpression() ResultSet {
+	subqueryExpression := &SubqueryExpression{
+		LeftParenthesis:  self.expect(LEFT_PARENTHESIS),
+		Select:           self.parseSelectStatement(),
+		RightParenthesis: self.expect(RIGHT_PARENTHESIS),
+	}
+	return subqueryExpression
+}
+
+func (self *Parser) parseTableSource() ResultSet {
+	tableSource := &TableSource{
+		TableName: self.parseTableName(),
+	}
+	if self.expectEqualsToken(AS) {
+		tableSource.AsName = self.parseStringLiteralOrIdentifier()
+	}
+	return tableSource
 }
