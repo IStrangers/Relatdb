@@ -206,16 +206,17 @@ func (self *Parser) parsePrimaryExpression() Expression {
 	return expr
 }
 
-func (self *Parser) parseNumberLiteral() Expression {
+func (self *Parser) parseNumberLiteral() *NumberLiteral {
 	defer self.expect(NUMBER)
-	return &NumberLiteral{
+	numberLiteral := &NumberLiteral{
 		Index:   self.index,
 		Literal: self.literal,
-		Value:   self.parseNumberLiteralValue(self.value),
 	}
+	numberLiteral.Value, numberLiteral.isDecimal = self.parseNumberLiteralValue(self.value)
+	return numberLiteral
 }
 
-func (self *Parser) parseNumberLiteralValue(literal string) any {
+func (self *Parser) parseNumberLiteralValue(literal string) (any, bool) {
 	var value any = 0
 	updateValue := func(v any, err error) bool {
 		if err != nil {
@@ -226,16 +227,16 @@ func (self *Parser) parseNumberLiteralValue(literal string) any {
 	}
 	intValue, err := strconv.ParseInt(literal, 0, 64)
 	if updateValue(intValue, err) {
-		return value
+		return value, false
 	}
 	floatValue, err := strconv.ParseFloat(literal, 64)
 	if updateValue(floatValue, err) {
-		return value
+		return value, true
 	}
-	return value
+	return value, false
 }
 
-func (self *Parser) parseStringLiteral() Expression {
+func (self *Parser) parseStringLiteral() *StringLiteral {
 	defer self.expectToken(STRING)
 	return &StringLiteral{
 		Index:   self.index,
@@ -244,7 +245,7 @@ func (self *Parser) parseStringLiteral() Expression {
 	}
 }
 
-func (self *Parser) parseBooleanLiteral() Expression {
+func (self *Parser) parseBooleanLiteral() *BooleanLiteral {
 	defer self.expectToken(BOOLEAN)
 	return &BooleanLiteral{
 		Index: self.index,
@@ -252,7 +253,7 @@ func (self *Parser) parseBooleanLiteral() Expression {
 	}
 }
 
-func (self *Parser) parseNullLiteral() Expression {
+func (self *Parser) parseNullLiteral() *NullLiteral {
 	defer self.expectToken(NULL)
 	return &NullLiteral{
 		Index: self.index,

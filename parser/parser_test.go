@@ -6,7 +6,10 @@ func TestParser(t *testing.T) {
 	parser := CreateParser(0, `
 		Create Database if not exists myBase;
 		create table myBase.User(
-		    
+		    id INT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+    		email VARCHAR(50) UNIQUE COMMENT '邮箱',
+    		age INT UNSIGNED DEFAULT 1 COMMENT '年龄',
+    		noId INT(6) ZEROFILL
 		);
 		CREATE INDEX idx_name on myBase.User(name);
 		CREATE UNIQUE INDEX idx_name on myBase.User(name);

@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"Relatdb/common"
+	"Relatdb/utils"
 	"fmt"
 )
 
@@ -81,6 +83,54 @@ func (self *Parser) parseColumnDefinitions() (columnDefinitions []*ColumnDefinit
 func (self *Parser) parseColumnDefinition() *ColumnDefinition {
 	columnDefinition := &ColumnDefinition{
 		Name: self.parseIdentifier(),
+	}
+	fieldType := GetFieldType(self.token)
+	if fieldType == 0 {
+		self.errorUnexpectedMsg(fmt.Sprintf("Unexpected column type: %v", self.token))
+		return nil
+	}
+	self.expectToken(self.token)
+	columnDefinition.Type = fieldType
+	if self.expectEqualsToken(LEFT_PARENTHESIS) {
+		length, _ := utils.ConvertInt(self.parseNumberLiteral().Value)
+		columnDefinition.Length = length
+		if self.expectEqualsToken(COMMA) {
+			decimal, _ := utils.ConvertInt(self.parseNumberLiteral().Value)
+			columnDefinition.Decimal = decimal
+		}
+		self.expectToken(RIGHT_PARENTHESIS)
+	} else {
+		lengthAndDecimal := common.GetFieldDefaultLengthAndDecimal(fieldType)
+		columnDefinition.Length = lengthAndDecimal.Length
+		columnDefinition.Decimal = lengthAndDecimal.Decimal
+	}
+
+	if self.expectEqualsToken(PRIMARY) && self.expectEqualsToken(KEY) {
+		columnDefinition.Flag |= common.PRI_KEY_FLAG
+	}
+	if self.expectEqualsToken(UNIQUE) {
+		columnDefinition.Flag |= common.UNIQUE_KEY_FLAG
+	}
+	if self.expectEqualsToken(UNSIGNED) {
+		columnDefinition.Flag |= common.UNSIGNED_FLAG
+	}
+	if self.expectEqualsToken(ZEROFILL) {
+		columnDefinition.Flag |= common.ZEROFILL_FLAG
+	}
+	if self.expectEqualsToken(AUTO_INCREMENT) {
+		columnDefinition.Flag |= common.AUTO_INCREMENT_FLAG
+	}
+	if self.expectEqualsToken(NOT) && self.expectEqualsToken(NULL) {
+		columnDefinition.Flag |= common.NOT_NULL_FLAG
+	} else if self.expectEqualsToken(NULL) {
+
+	}
+
+	if self.expectEqualsToken(DEFAULT) {
+		columnDefinition.DefaultValue = self.parseExpression()
+	}
+	if self.expectEqualsToken(COLUMN_COMMENT) {
+		columnDefinition.Comment = self.parseStringLiteral()
 	}
 	return columnDefinition
 }

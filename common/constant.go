@@ -760,3 +760,37 @@ const (
 	TIMESTAMP_FLAG      = 0x0400
 	SET_FLAG            = 0x0800
 )
+
+type LengthAndDecimal struct {
+	Length  int
+	Decimal int
+}
+
+var defaultLengthAndDecimal = map[byte]LengthAndDecimal{
+	FIELD_TYPE_BIT:         {1, 0},
+	FIELD_TYPE_TINY:        {4, 0},
+	FIELD_TYPE_SHORT:       {6, 0},
+	FIELD_TYPE_INT24:       {9, 0},
+	FIELD_TYPE_LONG:        {11, 0},
+	FIELD_TYPE_LONGLONG:    {20, 0},
+	FIELD_TYPE_DOUBLE:      {22, -1},
+	FIELD_TYPE_FLOAT:       {12, -1},
+	FIELD_TYPE_NEW_DECIMAL: {10, 0},
+	FIELD_TYPE_DATE:        {10, 0},
+	FIELD_TYPE_TIMESTAMP:   {19, 0},
+	FIELD_TYPE_DATETIME:    {19, 0},
+	FIELD_TYPE_STRING:      {1, 0},
+	FIELD_TYPE_VARCHAR:     {5, 0},
+	FIELD_TYPE_VAR_STRING:  {5, 0},
+	FIELD_TYPE_TINY_BLOB:   {255, 0},
+	FIELD_TYPE_BLOB:        {65535, 0},
+	FIELD_TYPE_MEDIUM_BLOB: {16777215, 0},
+	FIELD_TYPE_LONG_BLOB:   {4294967295, 0},
+	FIELD_TYPE_NULL:        {0, 0},
+	FIELD_TYPE_SET:         {-1, 0},
+	FIELD_TYPE_ENUM:        {-1, 0},
+}
+
+func GetFieldDefaultLengthAndDecimal(fieldType byte) LengthAndDecimal {
+	return defaultLengthAndDecimal[fieldType]
+}

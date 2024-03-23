@@ -58,9 +58,10 @@ func (self *ExpressionStatement) EndIndex() uint64 {
 
 type NumberLiteral struct {
 	_Expression_
-	Index   uint64
-	Literal string
-	Value   any
+	Index     uint64
+	Literal   string
+	Value     any
+	isDecimal bool
 }
 
 func (self *NumberLiteral) StartIndex() uint64 {
