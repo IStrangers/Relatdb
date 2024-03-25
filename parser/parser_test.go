@@ -26,7 +26,7 @@ func TestParser(t *testing.T) {
 		UPDATE myBase.User SET name = '更新名称',age = 1 WHERE name = '名称' ORDER BY age DESC LIMIT 0,10;
 		SELECT CONNECTION_ID();
 		select *,SUM(1) from t1 join t2 left join t3 on t2.id = t3.id WHERE t1.name = '名称' ORDER BY t1.age DESC LIMIT 0,10;
-	`, true, true)
+`, true, true)
 	statements := parser.Parse()
 	println(statements)
 }

@@ -312,7 +312,7 @@ func (self *Parser) parseSelectField() *SelectField {
 	default:
 		selectField.Expr = self.parseExpression()
 	}
-	if self.expectEqualsToken(AS) {
+	if self.expectEqualsToken(AS) || self.token == IDENTIFIER {
 		selectField.AsName = self.parseIdentifier()
 	}
 	return selectField

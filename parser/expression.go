@@ -432,7 +432,7 @@ func (self *Parser) parseTableSource() ResultSet {
 	tableSource := &TableSource{
 		TableName: self.parseTableName(),
 	}
-	if self.expectEqualsToken(AS) {
+	if self.expectEqualsToken(AS) || self.token == IDENTIFIER {
 		tableSource.AsName = self.parseIdentifier()
 	}
 	return tableSource
