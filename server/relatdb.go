@@ -56,8 +56,8 @@ func (self *Relatdb) Stop() {
 	}
 }
 
-func (self *Relatdb) getServerCapabilities() uint16 {
-	flag := uint16(0)
+func (self *Relatdb) getServerCapabilities() uint32 {
+	flag := uint32(0)
 	flag |= common.CLIENT_LONG_PASSWORD
 	flag |= common.CLIENT_FOUND_ROWS
 	flag |= common.CLIENT_LONG_FLAG
@@ -73,6 +73,7 @@ func (self *Relatdb) getServerCapabilities() uint16 {
 	flag |= common.CLIENT_IGNORE_SIGPIPE
 	flag |= common.CLIENT_TRANSACTIONS
 	flag |= common.CLIENT_SECURE_CONNECTION
+	flag |= common.CLIENT_PLUGIN_AUTH
 	return flag
 }
 

@@ -37,7 +37,7 @@ type HandshakePacket struct {
 	ServerVersion       []byte //数据库版本（n个字节,结束补0）
 	ConnectionId        uint32 //连接ID（4个字节）
 	AuthPluginDataPart1 []byte //认证插件随机数1（8个字节）
-	ServerCapabilities  uint16 //数据库支持的功能（2个字节）
+	ServerCapabilities  uint32 //数据库支持的功能（2个字节 + 填充字节）
 	ServerCharsetIndex  byte   //使用的字符集（1个字节）
 	ServerStatus        uint16 //数据库状态（2个字节）
 	AuthPluginDataPart2 []byte //认证插件随机数2（12位）
@@ -48,7 +48,7 @@ func (self *HandshakePacket) GetDataLength() uint32 {
 }
 
 func (self *HandshakePacket) GetPacketBytes() []byte {
-	serverCapabilitiesFiller := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	serverCapabilitiesFiller := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	var buf bytes.Buffer
 	buf.Write(self.GetDataLengthBytes(self.GetDataLength()))
 	buf.WriteByte(0)
@@ -58,9 +58,10 @@ func (self *HandshakePacket) GetPacketBytes() []byte {
 	binary.Write(&buf, binary.LittleEndian, self.ConnectionId)
 	buf.Write(self.AuthPluginDataPart1)
 	buf.WriteByte(0)
-	binary.Write(&buf, binary.LittleEndian, self.ServerCapabilities)
+	binary.Write(&buf, binary.LittleEndian, uint16(self.ServerCapabilities))
 	buf.WriteByte(self.ServerCharsetIndex)
 	binary.Write(&buf, binary.LittleEndian, self.ServerStatus)
+	binary.Write(&buf, binary.LittleEndian, uint16(self.ServerCapabilities>>16))
 	buf.Write(serverCapabilitiesFiller)
 	buf.Write(self.AuthPluginDataPart2)
 	buf.WriteByte(0)

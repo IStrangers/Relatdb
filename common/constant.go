@@ -31,6 +31,7 @@ const (
 	CLIENT_SECURE_CONNECTION = 0x00008000 // 支持加密连接。
 	CLIENT_MULTI_STATEMENTS  = 0x00010000 // 通知服务器客户端可以发送多条语句（由分号分隔）。如果该标志为没有被设置，多条语句执行。
 	CLIENT_MULTI_RESULTS     = 0x00020000 // 通知服务器客户端可以处理由多语句或者存储过程执行生成的多结果集。当打开CLIENT_MULTI_STATEMENTS时，这个标志自动的被打开。
+	CLIENT_PLUGIN_AUTH       = 0x00080000 // 认证插件
 )
 
 /*
