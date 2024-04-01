@@ -86,13 +86,14 @@ func (self *BinaryPacket) GetPacketBytes() []byte {
 
 type AuthPacket struct {
 	AbstractDataPacket
-	ClientFlags   uint32 //客户端功能
-	MaxPacketSize uint32 //最大包大小
-	CharsetIndex  byte   //字符集
-	Extra         []byte //控制信息
-	UserName      string //用户名
-	Password      []byte //密码
-	DataBase      string //数据库
+	ClientFlags    uint32 //客户端功能
+	MaxPacketSize  uint32 //最大包大小
+	CharsetIndex   byte   //字符集
+	Extra          []byte //控制信息
+	UserName       string //用户名
+	Password       []byte //密码
+	DataBase       string //数据库
+	AuthPluginName string //认证插件
 }
 
 func (self *AuthPacket) GetDataLength() uint32 {
@@ -103,30 +104,35 @@ func (self *AuthPacket) GetPacketBytes() []byte {
 	return nil
 }
 
-func (self *AuthPacket) Load(packet *BinaryPacket) {
+func LoadAuthPacket(packet *BinaryPacket) *AuthPacket {
+	authPacket := &AuthPacket{}
 	bytesReader := utils.NewBytesReader(packet.Data)
-	self.PacketSize = packet.PacketSize
-	self.PacketId = packet.PacketId
-	self.ClientFlags = bytesReader.ReadLittleEndianUint32()
-	self.MaxPacketSize = bytesReader.ReadLittleEndianUint32()
-	self.CharsetIndex = bytesReader.ReadByte()
+	authPacket.PacketSize = packet.PacketSize
+	authPacket.PacketId = packet.PacketId
+	authPacket.ClientFlags = bytesReader.ReadLittleEndianUint32()
+	authPacket.MaxPacketSize = bytesReader.ReadLittleEndianUint32()
+	authPacket.CharsetIndex = bytesReader.ReadByte()
 	offset := bytesReader.Offset
 	length := readLength(bytesReader)
 	fillerLength := uint64(23)
 	if length > 0 && length < fillerLength {
-		self.Extra = bytesReader.ReadBytes(length)
+		authPacket.Extra = bytesReader.ReadBytes(length)
 	}
 	bytesReader.Offset = offset + fillerLength
-	self.UserName = string(bytesReader.ReadToZero())
+	authPacket.UserName = string(bytesReader.ReadToZero())
 	length = readLength(bytesReader)
 	if length > 0 {
-		self.Password = bytesReader.ReadBytes(length)
+		authPacket.Password = bytesReader.ReadBytes(length)
 	} else {
-		self.Password = []byte{}
+		authPacket.Password = []byte{}
 	}
-	if self.ClientFlags&common.CLIENT_CONNECT_WITH_DB != 0 {
-		self.DataBase = string(bytesReader.ReadToZero())
+	if authPacket.ClientFlags&common.CLIENT_CONNECT_WITH_DB != 0 {
+		authPacket.DataBase = string(bytesReader.ReadToZero())
 	}
+	if authPacket.ClientFlags&common.CLIENT_PLUGIN_AUTH != 0 {
+		authPacket.AuthPluginName = string(bytesReader.ReadToZero())
+	}
+	return authPacket
 }
 
 func readLength(bytesReader *utils.BytesReader) uint64 {

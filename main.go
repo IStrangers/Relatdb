@@ -3,9 +3,9 @@ package main
 import "Relatdb/server"
 
 func main() {
-	relatdb := server.CreateRelatdb(&server.Options{
+	server := server.CreateServer(&server.Options{
 		BindIp:   "localhost",
 		BindPort: 3306,
 	})
-	relatdb.Start()
+	server.Start()
 }
