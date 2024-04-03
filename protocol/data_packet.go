@@ -159,5 +159,5 @@ func (self *ErrorPacket) GetPacketBytes() []byte {
 	buf.Write(self.SqlState)
 	buf.Write(self.Message)
 	bytes := buf.Bytes()
-	return append(getDataLengthBytes(uint32(len(bytes))), bytes...)
+	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
 }
