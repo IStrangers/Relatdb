@@ -75,7 +75,7 @@ func (self *Server) getServerCapabilities() uint32 {
 	flag |= common.CLIENT_IGNORE_SIGPIPE
 	flag |= common.CLIENT_TRANSACTIONS
 	flag |= common.CLIENT_SECURE_CONNECTION
-	//flag |= common.CLIENT_PLUGIN_AUTH
+	flag |= common.CLIENT_PLUGIN_AUTH
 	return flag
 }
 

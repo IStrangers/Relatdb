@@ -9,8 +9,6 @@ import (
 
 type DataPacket interface {
 	GetPacketId() byte
-	GetDataLength() uint32
-	GetDataLengthBytes(uint32) []byte
 	GetPacketBytes() []byte
 }
 
@@ -23,7 +21,7 @@ func (self *AbstractDataPacket) GetPacketId() byte {
 	return self.PacketId
 }
 
-func (self *AbstractDataPacket) GetDataLengthBytes(dataLength uint32) []byte {
+func getDataLengthBytes(dataLength uint32) []byte {
 	bytes := utils.Uint32ToBytes(dataLength, true)[1:]
 	return []byte{bytes[2], bytes[1], bytes[0]}
 }
@@ -41,16 +39,12 @@ type HandshakePacket struct {
 	ServerCharsetIndex  byte   //使用的字符集（1个字节）
 	ServerStatus        uint16 //数据库状态（2个字节）
 	AuthPluginDataPart2 []byte //认证插件随机数2（12位）
-}
-
-func (self *HandshakePacket) GetDataLength() uint32 {
-	return uint32(1 + len(self.ServerVersion) + 1 + 4 + len(self.AuthPluginDataPart1) + 1 + 2 + 1 + 2 + len(self.AuthPluginDataPart2) + 13 + 1)
+	AuthPluginName      []byte //日志插件名称
 }
 
 func (self *HandshakePacket) GetPacketBytes() []byte {
-	serverCapabilitiesFiller := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	serverCapabilitiesFiller := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	var buf bytes.Buffer
-	buf.Write(self.GetDataLengthBytes(self.GetDataLength()))
 	buf.WriteByte(0)
 	buf.WriteByte(self.ProtocolVersion)
 	buf.Write(self.ServerVersion)
@@ -62,10 +56,14 @@ func (self *HandshakePacket) GetPacketBytes() []byte {
 	buf.WriteByte(self.ServerCharsetIndex)
 	binary.Write(&buf, binary.LittleEndian, self.ServerStatus)
 	binary.Write(&buf, binary.LittleEndian, uint16(self.ServerCapabilities>>16))
+	buf.WriteByte(byte(len(self.AuthPluginDataPart1) + len(self.AuthPluginDataPart2) + 1))
 	buf.Write(serverCapabilitiesFiller)
 	buf.Write(self.AuthPluginDataPart2)
 	buf.WriteByte(0)
-	return buf.Bytes()
+	buf.Write(self.AuthPluginName)
+	buf.WriteByte(0)
+	bytes := buf.Bytes()
+	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
 }
 
 /*
@@ -76,12 +74,8 @@ type BinaryPacket struct {
 	Data []byte //数据
 }
 
-func (self *BinaryPacket) GetDataLength() uint32 {
-	return uint32(len(self.Data))
-}
-
 func (self *BinaryPacket) GetPacketBytes() []byte {
-	return nil
+	return self.Data
 }
 
 type AuthPacket struct {
@@ -94,10 +88,6 @@ type AuthPacket struct {
 	Password       []byte //密码
 	DataBase       string //数据库
 	AuthPluginName string //认证插件
-}
-
-func (self *AuthPacket) GetDataLength() uint32 {
-	return 0
 }
 
 func (self *AuthPacket) GetPacketBytes() []byte {
@@ -160,18 +150,14 @@ type ErrorPacket struct {
 	Message        []byte //错误消息内容
 }
 
-func (self *ErrorPacket) GetDataLength() uint32 {
-	return uint32(1 + 2 + 1 + len(self.SqlState) + len(self.Message))
-}
-
 func (self *ErrorPacket) GetPacketBytes() []byte {
 	var buf bytes.Buffer
-	buf.Write(self.GetDataLengthBytes(self.GetDataLength()))
 	buf.WriteByte(self.PacketId)
 	buf.WriteByte(self.FieldCount)
 	binary.Write(&buf, binary.LittleEndian, self.ErrorCode)
 	buf.WriteByte(self.SqlStateMarker)
 	buf.Write(self.SqlState)
 	buf.Write(self.Message)
-	return buf.Bytes()
+	bytes := buf.Bytes()
+	return append(getDataLengthBytes(uint32(len(bytes))), bytes...)
 }

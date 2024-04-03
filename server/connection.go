@@ -78,6 +78,7 @@ func (self *Connection) sendHandshakePacket() {
 		ServerCharsetIndex:  33,
 		ServerStatus:        2,
 		AuthPluginDataPart2: utils.RandomBytes(12),
+		AuthPluginName:      []byte("mysql_native_password"),
 	}
 	self.authPluginDataPart = append(handshakePacket.AuthPluginDataPart1, handshakePacket.AuthPluginDataPart2...)
 	self.sendDataPacket(handshakePacket)
