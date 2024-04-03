@@ -4,6 +4,9 @@ import "testing"
 
 func TestParser(t *testing.T) {
 	parser := CreateParser(0, `
+		Show databases;
+		SHOW tables;
+		show variables;
 		Create Database if not exists myBase;
 		create table myBase.User(
 		    id INT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',

@@ -61,6 +61,10 @@ const (
 	LOGICAL_AND      // &&
 	LOGICAL_OR       // ||
 
+	SHOW           // show
+	DATABASES      // databases
+	TABLES         // tables
+	VARIABLES      // variables
 	IF             // if
 	NOT            // not
 	EXISTS         // exists
@@ -185,6 +189,10 @@ var tokenStringMap = [...]string{
 	LOGICAL_AND:      "&&",
 	LOGICAL_OR:       "||",
 
+	SHOW:           "show",
+	DATABASES:      "databases",
+	TABLES:         "tables",
+	VARIABLES:      "variables",
 	IF:             "if",
 	NOT:            "not",
 	EXISTS:         "exists",
@@ -259,6 +267,10 @@ var keywordMap = map[string]Token{
 	"true":           BOOLEAN,
 	"false":          BOOLEAN,
 	"null":           NULL,
+	"show":           SHOW,
+	"databases":      DATABASES,
+	"tables":         TABLES,
+	"variables":      VARIABLES,
 	"if":             IF,
 	"not":            NOT,
 	"exists":         EXISTS,

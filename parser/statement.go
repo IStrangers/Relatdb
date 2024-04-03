@@ -11,6 +11,8 @@ func (self *Parser) parseStatement() Statement {
 	self.openScope()
 
 	switch self.token {
+	case SHOW:
+		return self.parseShowStatement()
 	case CREATE:
 		return self.parseCreateStatement()
 	case DROP:
@@ -34,6 +36,26 @@ func (self *Parser) parseStatements() (statements []Statement) {
 		self.expectEqualsToken(SEMICOLON)
 	}
 	return
+}
+
+func (self *Parser) parseShowStatement() Statement {
+	showIndex := self.expect(SHOW)
+	switch self.token {
+	case DATABASES, TABLES, VARIABLES:
+		showType := map[Token]ShowStatementType{
+			DATABASES: ShowDatabases,
+			TABLES:    ShowTables,
+			VARIABLES: ShowVariables,
+		}[self.token]
+		return &ShowStatement{
+			ShowIndex: showIndex,
+			Type:      showType,
+			KeyWord:   self.parseKeyWordIdentifier(self.token),
+		}
+	default:
+		self.errorUnexpectedToken(self.token)
+		return nil
+	}
 }
 
 func (self *Parser) parseCreateStatement() Statement {

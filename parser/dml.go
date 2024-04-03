@@ -218,6 +218,37 @@ func (self *Limit) EndIndex() uint64 {
 	return self.Count.EndIndex()
 }
 
+type ShowStatementType int
+
+const (
+	_ = iota
+	ShowEngines
+	ShowDatabases
+	ShowTables
+	ShowColumns
+	ShowVariables
+)
+
+type ShowStatement struct {
+	_DMLStatement_
+
+	ShowIndex uint64
+	Type      ShowStatementType
+	KeyWord   *Identifier
+}
+
+func (self *ShowStatement) StartIndex() uint64 {
+	return self.ShowIndex
+}
+
+func (self *ShowStatement) EndIndex() uint64 {
+	switch self.Type {
+	case ShowDatabases, ShowTables, ShowVariables:
+		return self.KeyWord.EndIndex()
+	}
+	return self.ShowIndex
+}
+
 type InsertStatement struct {
 	_DMLStatement_
 
