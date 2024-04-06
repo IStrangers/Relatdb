@@ -87,6 +87,9 @@ func (self *Parser) scan() (tkn Token, literal string, value string, index uint6
 				literal = tkn.String()
 				value = tkn.String()
 				break
+			case '@':
+				tkn, literal, value = AT_IDENTIFIER, string(chr), string(chr)
+				break
 			case '(':
 				tkn, literal, value = LEFT_PARENTHESIS, string(chr), string(chr)
 				break

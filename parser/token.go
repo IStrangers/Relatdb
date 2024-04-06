@@ -17,6 +17,7 @@ const (
 	WHITE_SPACE
 	IDENTIFIER
 
+	AT_IDENTIFIER     // @
 	LEFT_PARENTHESIS  // (
 	RIGHT_PARENTHESIS // )
 	LEFT_BRACE        // {
@@ -65,6 +66,7 @@ const (
 	DATABASES      // databases
 	TABLES         // tables
 	VARIABLES      // variables
+	USE            // use
 	IF             // if
 	NOT            // not
 	EXISTS         // exists
@@ -145,6 +147,7 @@ var tokenStringMap = [...]string{
 	WHITE_SPACE:   "WHITE_SPACE",
 	IDENTIFIER:    "IDENTIFIER",
 
+	AT_IDENTIFIER:     "@",
 	LEFT_PARENTHESIS:  "(",
 	RIGHT_PARENTHESIS: ")",
 	LEFT_BRACE:        "{",
@@ -193,6 +196,7 @@ var tokenStringMap = [...]string{
 	DATABASES:      "databases",
 	TABLES:         "tables",
 	VARIABLES:      "variables",
+	USE:            "use",
 	IF:             "if",
 	NOT:            "not",
 	EXISTS:         "exists",
@@ -271,6 +275,7 @@ var keywordMap = map[string]Token{
 	"databases":      DATABASES,
 	"tables":         TABLES,
 	"variables":      VARIABLES,
+	"use":            USE,
 	"if":             IF,
 	"not":            NOT,
 	"exists":         EXISTS,

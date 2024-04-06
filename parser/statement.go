@@ -13,6 +13,8 @@ func (self *Parser) parseStatement() Statement {
 	switch self.token {
 	case SHOW:
 		return self.parseShowStatement()
+	case USE:
+		return self.parseUseStatement()
 	case CREATE:
 		return self.parseCreateStatement()
 	case DROP:
@@ -55,6 +57,14 @@ func (self *Parser) parseShowStatement() Statement {
 	default:
 		self.errorUnexpectedToken(self.token)
 		return nil
+	}
+}
+
+func (self *Parser) parseUseStatement() Statement {
+	useIndex := self.expect(USE)
+	return &UseStatement{
+		UseIndex: useIndex,
+		Database: self.parseIdentifier(),
 	}
 }
 

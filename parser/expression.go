@@ -181,6 +181,7 @@ func (parser *Parser) parseLeftHandSideExpressionAllowCall(stopTokens []Token) (
 
 func (self *Parser) parsePrimaryExpression() Expression {
 	var expr Expression
+
 	switch self.token {
 	case NUMBER:
 		expr = self.parseNumberLiteral()
@@ -198,9 +199,19 @@ func (self *Parser) parsePrimaryExpression() Expression {
 		}
 	case LEFT_PARENTHESIS:
 		expr = self.parseSubqueryExpression()
+	case AT_IDENTIFIER:
+		atIndex := self.expect(AT_IDENTIFIER)
+		if self.token == AT_IDENTIFIER {
+			expr = self.parseVariableRef(atIndex)
+		} else {
+			expr = self.parseVariableName(atIndex)
+		}
 	default:
-		self.errorUnexpectedToken(self.token)
-		return nil
+		if _, ok := IsKeyword(self.literal); ok {
+			expr = self.parseKeyWordIdentifier(self.token)
+		} else {
+			self.errorUnexpectedToken(self.token)
+		}
 	}
 
 	return expr
@@ -273,6 +284,21 @@ func (self *Parser) parseKeyWordIdentifier(keyword Token) *Identifier {
 	return &Identifier{
 		Index: self.index,
 		Name:  self.value,
+	}
+}
+
+func (self *Parser) parseVariableRef(atIndex uint64) *VariableRef {
+	self.expectToken(AT_IDENTIFIER)
+	return &VariableRef{
+		AtIndex: atIndex,
+		Name:    self.parseIdentifier(),
+	}
+}
+
+func (self *Parser) parseVariableName(atIndex uint64) *VariableName {
+	return &VariableName{
+		AtIndex: atIndex,
+		Name:    self.parseIdentifier(),
 	}
 }
 

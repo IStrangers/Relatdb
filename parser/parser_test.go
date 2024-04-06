@@ -7,6 +7,7 @@ func TestParser(t *testing.T) {
 		Show databases;
 		SHOW tables;
 		show variables;
+		use myBase;
 		Create Database if not exists myBase;
 		create table myBase.User(
 		    id INT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',

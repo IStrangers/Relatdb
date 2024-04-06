@@ -2,12 +2,14 @@ package server
 
 import (
 	"Relatdb/common"
+	"Relatdb/parser"
 	"Relatdb/protocol"
 	"Relatdb/utils"
 	"bufio"
 	"bytes"
 	"crypto/sha1"
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -19,6 +21,9 @@ type Connection struct {
 	writer *bufio.Writer
 
 	authPluginDataPart []byte
+	clientCapabilities uint32
+	userName           string
+	database           string
 }
 
 func NewConnection(server *Server, conn net.Conn) *Connection {
@@ -31,32 +36,34 @@ func NewConnection(server *Server, conn net.Conn) *Connection {
 	}
 }
 
-func (self *Connection) read(bytes []byte) ([]byte, error) {
+func (self *Connection) read(bytes []byte) []byte {
 	_, err := self.reader.Read(bytes)
-	return bytes, err
+	if err != nil {
+		log.Println("conn read error:", err)
+	}
+	return bytes
 }
 
-func (self *Connection) ReadBySize(size uint32) ([]byte, error) {
+func (self *Connection) ReadBySize(size uint32) []byte {
 	return self.read(make([]byte, size))
 }
 
-func (self *Connection) readByte() (byte, error) {
-	bytes, err := self.ReadBySize(1)
-	if err != nil {
-		return 0, err
-	}
-	return bytes[0], nil
+func (self *Connection) readByte() byte {
+	return self.ReadBySize(1)[0]
 }
 
-func (self *Connection) write(bytes []byte) error {
+func (self *Connection) write(bytes []byte) {
 	_, err := self.writer.Write(bytes)
-	if err == nil {
-		err = self.writer.Flush()
+	if err != nil {
+		log.Println("conn write error:", err)
 	}
-	return err
+	err = self.writer.Flush()
+	if err != nil {
+		log.Println("conn write flush error:", err)
+	}
 }
 
-func (self *Connection) writeErrorMessage(packetId byte, errorCode uint16, message string) error {
+func (self *Connection) writeErrorMessage(packetId byte, errorCode uint16, message string) {
 	errorPacket := &protocol.ErrorPacket{}
 	errorPacket.PacketId = packetId
 	errorPacket.FieldCount = 0xff
@@ -65,7 +72,7 @@ func (self *Connection) writeErrorMessage(packetId byte, errorCode uint16, messa
 	errorPacket.SqlState = []byte("HY000")
 	errorPacket.Message = []byte(message)
 	packetBytes := errorPacket.GetPacketBytes()
-	return self.write(packetBytes)
+	self.write(packetBytes)
 }
 
 func (self *Connection) sendHandshakePacket() {
@@ -86,21 +93,18 @@ func (self *Connection) sendHandshakePacket() {
 
 func (self *Connection) sendDataPacket(dataPacket protocol.DataPacket) {
 	packetBytes := dataPacket.GetPacketBytes()
-	err := self.write(packetBytes)
-	if err != nil {
-		fmt.Println("Send data packet error:", err.Error())
-	}
+	self.write(packetBytes)
 }
 
 func (self *Connection) receiveBinaryPacket() *protocol.BinaryPacket {
-	bytes, _ := self.ReadBySize(3)
+	bytes := self.ReadBySize(3)
 	packetSize := utils.Uint32(bytes, false)
 	if packetSize <= 0 || packetSize > common.MAX_PACKET_SIZE {
 		fmt.Println("Received packet size error:", packetSize)
 		return nil
 	}
-	packetId, _ := self.readByte()
-	data, _ := self.ReadBySize(packetSize)
+	packetId := self.readByte()
+	data := self.ReadBySize(packetSize)
 	binaryPacket := &protocol.BinaryPacket{}
 	binaryPacket.PacketSize = packetSize
 	binaryPacket.PacketId = packetId
@@ -118,7 +122,9 @@ func (self *Connection) authentication() bool {
 		self.writeErrorMessage(2, common.ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", authPacket.UserName))
 		return false
 	}
-	self.authOK()
+	self.clientCapabilities = authPacket.ClientFlags
+	self.userName = authPacket.UserName
+	self.writeAuthOK()
 	return true
 }
 
@@ -151,6 +157,10 @@ func scramble411(data []byte, seed []byte) []byte {
 	return stage3
 }
 
+func (self *Connection) writeAuthOK() {
+	self.write(common.SERVER_AUTH_OK)
+}
+
 func (self *Connection) receiveCommandHandler() {
 	for {
 		binaryPacket := self.receiveBinaryPacket()
@@ -160,10 +170,10 @@ func (self *Connection) receiveCommandHandler() {
 		bytesReader := utils.NewBytesReader(binaryPacket.Data)
 		switch bytesReader.ReadByte() {
 		case common.COM_INIT_DB:
-			self.initDB(bytesReader)
+			self.handlingInitDB(string(bytesReader.ReadRemainingBytes()))
 			break
 		case common.COM_QUERY:
-			self.query(bytesReader)
+			self.handlingQuery(string(bytesReader.ReadRemainingBytes()))
 			break
 		case common.COM_PING:
 			self.ping()
@@ -172,19 +182,19 @@ func (self *Connection) receiveCommandHandler() {
 			self.close()
 			break
 		case common.COM_PROCESS_KILL:
-			self.kill(bytesReader)
+			self.kill()
 			break
 		case common.COM_STMT_PREPARE:
-			self.stmtPrepare(bytesReader)
+			self.handlingStmtPrepare()
 			break
 		case common.COM_STMT_EXECUTE:
-			self.stmtExecute(bytesReader)
+			self.handlingStmtExecute()
 			break
 		case common.COM_STMT_CLOSE:
-			self.stmtClose(bytesReader)
+			self.handlingStmtClose()
 			break
 		case common.COM_HEARTBEAT:
-			self.heartbeat(bytesReader)
+			self.heartbeat()
 			break
 		default:
 			self.writeErrorMessage(1, common.ER_UNKNOWN_COM_ERROR, "Unknown command")
@@ -193,43 +203,56 @@ func (self *Connection) receiveCommandHandler() {
 	}
 }
 
-func (self *Connection) authOK() {
-	self.write(common.SERVER_AUTH_OK)
-}
-
-func (self *Connection) initDB(bytesReader *utils.BytesReader) {
-
-}
-
-func (self *Connection) query(bytesReader *utils.BytesReader) {
-	bytes := bytesReader.ReadRemainingBytes()
-	querySql := string(bytes)
-	println(querySql)
-}
-
-func (self *Connection) ping() {
+func (self *Connection) writeOk() {
 	self.write(common.SERVER_OK)
 }
 
-func (self *Connection) close() {
-	self.conn.Close()
+func (self *Connection) ping() {
+	self.writeOk()
 }
 
-func (self *Connection) kill(bytesReader *utils.BytesReader) {
-}
-
-func (self *Connection) stmtPrepare(bytesReader *utils.BytesReader) {
-
-}
-
-func (self *Connection) stmtExecute(bytesReader *utils.BytesReader) {
-
-}
-
-func (self *Connection) stmtClose(bytesReader *utils.BytesReader) {
-
-}
-
-func (self *Connection) heartbeat(bytesReader *utils.BytesReader) {
+func (self *Connection) heartbeat() {
 	self.ping()
+}
+
+func (self *Connection) close() {
+	err := self.conn.Close()
+	if err != nil {
+		log.Println("conn close error:", err)
+	}
+}
+
+func (self *Connection) kill() {
+}
+
+func (self *Connection) handlingInitDB(database string) {
+	log.Println("use database:", database)
+	self.database = database
+	self.writeOk()
+}
+
+func (self *Connection) handlingQuery(querySql string) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			log.Printf("parser query sql error: sql=%s, err=%v\n", querySql, err)
+		}
+	}()
+	parser := parser.CreateParser(1, querySql, true, true)
+	stmts := parser.Parse()
+	for _, stmt := range stmts {
+		println(stmt)
+	}
+}
+
+func (self *Connection) handlingStmtPrepare() {
+
+}
+
+func (self *Connection) handlingStmtExecute() {
+
+}
+
+func (self *Connection) handlingStmtClose() {
+
 }
