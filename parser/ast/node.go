@@ -1,4 +1,8 @@
-package parser
+package ast
+
+import (
+	"Relatdb/parser/token"
+)
 
 type Node interface {
 	StartIndex() uint64
@@ -61,7 +65,7 @@ type NumberLiteral struct {
 	Index     uint64
 	Literal   string
 	Value     any
-	isDecimal bool
+	IsDecimal bool
 }
 
 func (self *NumberLiteral) StartIndex() uint64 {
@@ -136,7 +140,7 @@ type AssignExpression struct {
 	_Expression_
 
 	Left     Expression
-	Operator Token
+	Operator token.Token
 	Right    Expression
 }
 
@@ -151,7 +155,7 @@ func (self *AssignExpression) EndIndex() uint64 {
 type BinaryExpression struct {
 	_Expression_
 	Left       Expression
-	Operator   Token
+	Operator   token.Token
 	Right      Expression
 	Comparison bool
 }
@@ -167,7 +171,7 @@ func (self *BinaryExpression) EndIndex() uint64 {
 type UnaryExpression struct {
 	_Expression_
 	Index    uint64
-	Operator Token
+	Operator token.Token
 	Operand  Expression
 	Postfix  bool
 }

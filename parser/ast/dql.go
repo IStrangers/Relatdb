@@ -1,4 +1,4 @@
-package parser
+package ast
 
 type GroupByClause struct {
 	_Statement_

@@ -3,6 +3,7 @@ package server
 import (
 	"Relatdb/common"
 	"Relatdb/parser"
+	"Relatdb/parser/ast"
 	"Relatdb/protocol"
 	"Relatdb/utils"
 	"bufio"
@@ -24,6 +25,7 @@ type Connection struct {
 	clientCapabilities uint32
 	userName           string
 	database           string
+	context            *Context
 }
 
 func NewConnection(server *Server, conn net.Conn) *Connection {
@@ -124,6 +126,7 @@ func (self *Connection) authentication() bool {
 	}
 	self.clientCapabilities = authPacket.ClientFlags
 	self.userName = authPacket.UserName
+	self.context = NewContext()
 	self.writeAuthOK()
 	return true
 }
@@ -240,9 +243,17 @@ func (self *Connection) handlingQuery(querySql string) {
 	}()
 	parser := parser.CreateParser(1, querySql, true, true)
 	stmts := parser.Parse()
-	for _, stmt := range stmts {
-		println(stmt)
+	stmtLength := len(stmts)
+	if stmtLength > 1 && self.clientCapabilities&common.CLIENT_MULTI_STATEMENTS == 0 {
+		//return
 	}
+	for i, stmt := range stmts {
+		self.handlingStmt(stmt, stmtLength-1 == i)
+	}
+}
+
+func (self *Connection) handlingStmt(stmt ast.Statement, isLastStmt bool) {
+	self.context.executeStmt(stmt)
 }
 
 func (self *Connection) handlingStmtPrepare() {

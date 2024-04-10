@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"Relatdb/parser/ast"
+	token2 "Relatdb/parser/token"
 	"fmt"
 	"strings"
 )
@@ -23,7 +25,7 @@ type Parser struct {
 	chr       rune
 	chrOffset uint64
 	offset    uint64
-	token     Token
+	token     token2.Token
 	literal   string
 	value     string
 	index     uint64
@@ -57,12 +59,12 @@ func (self *Parser) closeScope() {
 	self.scope = self.scope.outer
 }
 
-func (self *Parser) Parse() []Statement {
+func (self *Parser) Parse() []ast.Statement {
 	self.next()
 	return self.parseStatements()
 }
 
-func (self *Parser) ScanNextToken() (Token, string, string, uint64) {
+func (self *Parser) ScanNextToken() (token2.Token, string, string, uint64) {
 	return self.scan()
 }
 
@@ -70,7 +72,7 @@ func (self *Parser) next() {
 	self.token, self.literal, self.value, self.index = self.scan()
 }
 
-func (self *Parser) expect(tkn Token) uint64 {
+func (self *Parser) expect(tkn token2.Token) uint64 {
 	index := self.index
 	if self.token != tkn {
 		self.errorUnexpectedToken(tkn)
@@ -79,7 +81,7 @@ func (self *Parser) expect(tkn Token) uint64 {
 	return index
 }
 
-func (self *Parser) expectToken(tkn Token) Token {
+func (self *Parser) expectToken(tkn token2.Token) token2.Token {
 	if self.token != tkn {
 		self.errorUnexpectedToken(tkn)
 	}
@@ -87,7 +89,7 @@ func (self *Parser) expectToken(tkn Token) Token {
 	return tkn
 }
 
-func (self *Parser) expectEqualsToken(tkn Token) bool {
+func (self *Parser) expectEqualsToken(tkn token2.Token) bool {
 	if self.token != tkn {
 		return false
 	}
@@ -108,7 +110,7 @@ type ParseState struct {
 	chr        rune
 	chrOffset  uint64
 	offset     uint64
-	token      Token
+	token      token2.Token
 	literal    string
 	value      string
 	index      uint64
@@ -137,7 +139,7 @@ func (self *Parser) restoreParseState(parseState *ParseState) {
 	self.index = parseState.index
 }
 
-func (self *Parser) errorUnexpectedToken(tkn Token) {
+func (self *Parser) errorUnexpectedToken(tkn token2.Token) {
 	panic(fmt.Sprintf("Unexpected token %v", tkn))
 }
 

@@ -1,11 +1,12 @@
 package parser
 
 import (
+	"Relatdb/parser/token"
 	"fmt"
 	"strings"
 )
 
-func (self *Parser) scan() (tkn Token, literal string, value string, index uint64) {
+func (self *Parser) scan() (tkn token.Token, literal string, value string, index uint64) {
 	for {
 		skipWhiteSpace := self.skipWhiteSpace
 		if skipWhiteSpace {
@@ -14,60 +15,60 @@ func (self *Parser) scan() (tkn Token, literal string, value string, index uint6
 		index = self.chrOffset
 		switch chr := self.chr; {
 		case !skipWhiteSpace && isWhiteSpaceChr(chr):
-			tkn, literal, value = WHITE_SPACE, string(chr), string(chr)
+			tkn, literal, value = token.WHITE_SPACE, string(chr), string(chr)
 			self.readChr()
 			break
 		case isIdentifierStart(chr):
 			literal = self.scanIdentifier()
 			value = literal
-			keywordToken, exists := IsKeyword(literal)
+			keywordToken, exists := token.IsKeyword(literal)
 			if exists {
 				tkn = keywordToken
 			} else {
-				tkn = IDENTIFIER
+				tkn = token.IDENTIFIER
 			}
 			break
 		case isStringSymbol(chr):
 			self.readChr()
 			value = self.scanString()
 			literal = string(chr) + value + string(self.chr)
-			tkn = STRING
+			tkn = token.STRING
 			self.readChr()
 			break
 		case isNumeric(chr):
 			literal = self.scanNumericLiteral()
 			value = literal
-			tkn = NUMBER
+			tkn = token.NUMBER
 			break
 		default:
 			self.readChr()
 			switch chr {
 			case -1:
-				tkn = EOF
+				tkn = token.EOF
 				break
 			case '+':
-				tkn = self.switchToken("+,=", INCREMENT, ADDITION_ASSIGN, ADDITION)
+				tkn = self.switchToken("+,=", token.INCREMENT, token.ADDITION_ASSIGN, token.ADDITION)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '-':
-				tkn = self.switchToken("-,=", DECREMENT, SUBTRACT_ASSIGN, SUBTRACT)
+				tkn = self.switchToken("-,=", token.DECREMENT, token.SUBTRACT_ASSIGN, token.SUBTRACT)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '*':
-				tkn = self.switchToken("=", MULTIPLY_ASSIGN, MULTIPLY)
+				tkn = self.switchToken("=", token.MULTIPLY_ASSIGN, token.MULTIPLY)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '/':
-				tkn = self.switchToken("/,*,=", COMMENT, MULTI_COMMENT, DIVIDE_ASSIGN, DIVIDE)
+				tkn = self.switchToken("/,*,=", token.COMMENT, token.MULTI_COMMENT, token.DIVIDE_ASSIGN, token.DIVIDE)
 				literal = tkn.String()
 				value = tkn.String()
-				if tkn == COMMENT || tkn == MULTI_COMMENT {
+				if tkn == token.COMMENT || tkn == token.MULTI_COMMENT {
 					comment := self.scanComment(tkn)
 					value = comment
-					if tkn == COMMENT {
+					if tkn == token.COMMENT {
 						comment = "//" + comment
 					} else {
 						comment = "/*" + comment
@@ -83,75 +84,75 @@ func (self *Parser) scan() (tkn Token, literal string, value string, index uint6
 				}
 				break
 			case '%':
-				tkn = self.switchToken("=", REMAINDER_ASSIGN, REMAINDER)
+				tkn = self.switchToken("=", token.REMAINDER_ASSIGN, token.REMAINDER)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '@':
-				tkn, literal, value = AT_IDENTIFIER, string(chr), string(chr)
+				tkn, literal, value = token.AT_IDENTIFIER, string(chr), string(chr)
 				break
 			case '(':
-				tkn, literal, value = LEFT_PARENTHESIS, string(chr), string(chr)
+				tkn, literal, value = token.LEFT_PARENTHESIS, string(chr), string(chr)
 				break
 			case ')':
-				tkn, literal, value = RIGHT_PARENTHESIS, string(chr), string(chr)
+				tkn, literal, value = token.RIGHT_PARENTHESIS, string(chr), string(chr)
 				break
 			case '{':
-				tkn, literal, value = LEFT_BRACE, string(chr), string(chr)
+				tkn, literal, value = token.LEFT_BRACE, string(chr), string(chr)
 				break
 			case '}':
-				tkn, literal, value = RIGHT_BRACE, string(chr), string(chr)
+				tkn, literal, value = token.RIGHT_BRACE, string(chr), string(chr)
 				break
 			case '[':
-				tkn, literal, value = LEFT_BRACKET, string(chr), string(chr)
+				tkn, literal, value = token.LEFT_BRACKET, string(chr), string(chr)
 				break
 			case ']':
-				tkn, literal, value = RIGHT_BRACKET, string(chr), string(chr)
+				tkn, literal, value = token.RIGHT_BRACKET, string(chr), string(chr)
 				break
 			case '.':
-				tkn, literal, value = DOT, string(chr), string(chr)
+				tkn, literal, value = token.DOT, string(chr), string(chr)
 				break
 			case ',':
-				tkn, literal, value = COMMA, string(chr), string(chr)
+				tkn, literal, value = token.COMMA, string(chr), string(chr)
 				break
 			case ':':
-				tkn, literal, value = COLON, string(chr), string(chr)
+				tkn, literal, value = token.COLON, string(chr), string(chr)
 				break
 			case ';':
-				tkn, literal, value = SEMICOLON, string(chr), string(chr)
+				tkn, literal, value = token.SEMICOLON, string(chr), string(chr)
 				break
 			case '!':
-				tkn = self.switchToken("=", NOT_EQUAL, NOT)
+				tkn = self.switchToken("=", token.NOT_EQUAL, token.NOT)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '=':
-				tkn = self.switchToken("=", EQUAL, ASSIGN)
+				tkn = self.switchToken("=", token.EQUAL, token.ASSIGN)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '<':
-				tkn = self.switchToken("=", LESS_OR_EQUAL, LESS)
+				tkn = self.switchToken("=", token.LESS_OR_EQUAL, token.LESS)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '>':
-				tkn = self.switchToken("=", GREATER_OR_EQUAL, GREATER)
+				tkn = self.switchToken("=", token.GREATER_OR_EQUAL, token.GREATER)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '&':
-				tkn = self.switchToken("&,=", LOGICAL_AND, AND_ARITHMETIC_ASSIGN, AND_ARITHMETIC)
+				tkn = self.switchToken("&,=", token.LOGICAL_AND, token.AND_ARITHMETIC_ASSIGN, token.AND_ARITHMETIC)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			case '|':
-				tkn = self.switchToken("|,=", LOGICAL_OR, OR_ARITHMETIC_ASSIGN, OR_ARITHMETIC)
+				tkn = self.switchToken("|,=", token.LOGICAL_OR, token.OR_ARITHMETIC_ASSIGN, token.OR_ARITHMETIC)
 				literal = tkn.String()
 				value = tkn.String()
 				break
 			default:
-				tkn = ILLEGAL
+				tkn = token.ILLEGAL
 				panic(fmt.Sprintf("Unexpected end of input: %v", index))
 				break
 			}
@@ -198,8 +199,8 @@ func (self *Parser) scanString() string {
 	return self.scanByFilter(isNotStringSymbol)
 }
 
-func (self *Parser) scanComment(tkn Token) string {
-	if tkn == MULTI_COMMENT {
+func (self *Parser) scanComment(tkn token.Token) string {
+	if tkn == token.MULTI_COMMENT {
 		multiCommentCount := 1
 		multiComment := self.scanByFilter(func(chr rune) bool {
 			if chr == '/' && self.readChr() == '*' {
@@ -219,7 +220,7 @@ func (self *Parser) scanComment(tkn Token) string {
 	}
 }
 
-func (self *Parser) switchToken(keysStr string, tkns ...Token) Token {
+func (self *Parser) switchToken(keysStr string, tkns ...token.Token) token.Token {
 	keys := strings.Split(keysStr, ",")
 	for i, key := range keys {
 		if self.chr == rune(key[0]) {

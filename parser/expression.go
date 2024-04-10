@@ -1,23 +1,25 @@
 package parser
 
 import (
+	"Relatdb/parser/ast"
+	"Relatdb/parser/token"
 	"fmt"
 	"strconv"
 )
 
-func (self *Parser) parseExpression() Expression {
+func (self *Parser) parseExpression() ast.Expression {
 	left := self.parseAssignExpression()
 
 	return left
 }
 
-func (self *Parser) parseAssignExpression() Expression {
+func (self *Parser) parseAssignExpression() ast.Expression {
 	left := self.parseConditionalExpression()
 
-	if self.token == ASSIGN {
+	if self.token == token.ASSIGN {
 		operator := self.token
 		self.expectToken(operator)
-		return &AssignExpression{
+		return &ast.AssignExpression{
 			Left:     left,
 			Operator: operator,
 			Right:    self.parseAssignExpression(),
@@ -27,19 +29,19 @@ func (self *Parser) parseAssignExpression() Expression {
 	return left
 }
 
-func (self *Parser) parseConditionalExpression() Expression {
+func (self *Parser) parseConditionalExpression() ast.Expression {
 	left := self.parseLogicalOrExpression()
 
 	return left
 }
 
-func (self *Parser) parseLogicalOrExpression() Expression {
+func (self *Parser) parseLogicalOrExpression() ast.Expression {
 	left := self.parseLogicalAndExpression()
 
 	for {
 		switch self.token {
-		case OR:
-			left = &BinaryExpression{
+		case token.OR:
+			left = &ast.BinaryExpression{
 				Operator: self.expectToken(self.token),
 				Left:     left,
 				Right:    self.parseLogicalAndExpression(),
@@ -50,13 +52,13 @@ func (self *Parser) parseLogicalOrExpression() Expression {
 	}
 }
 
-func (self *Parser) parseLogicalAndExpression() Expression {
+func (self *Parser) parseLogicalAndExpression() ast.Expression {
 	left := self.parseEqualityExpression()
 
 	for {
 		switch self.token {
-		case AND:
-			left = &BinaryExpression{
+		case token.AND:
+			left = &ast.BinaryExpression{
 				Operator: self.expectToken(self.token),
 				Left:     left,
 				Right:    self.parseEqualityExpression(),
@@ -67,12 +69,12 @@ func (self *Parser) parseLogicalAndExpression() Expression {
 	}
 }
 
-func (self *Parser) parseEqualityExpression() Expression {
+func (self *Parser) parseEqualityExpression() ast.Expression {
 	left := self.parseRelationalExpression()
 
 	for {
-		if self.token == EQUAL || self.token == NOT_EQUAL || (self.scope.inWhere && self.token == ASSIGN) {
-			left = &BinaryExpression{
+		if self.token == token.EQUAL || self.token == token.NOT_EQUAL || (self.scope.inWhere && self.token == token.ASSIGN) {
+			left = &ast.BinaryExpression{
 				Operator: self.expectToken(self.token),
 				Left:     left,
 				Right:    self.parseRelationalExpression(),
@@ -83,13 +85,13 @@ func (self *Parser) parseEqualityExpression() Expression {
 	}
 }
 
-func (self *Parser) parseRelationalExpression() Expression {
+func (self *Parser) parseRelationalExpression() ast.Expression {
 	left := self.parseAdditiveExpression()
 
 	for {
 		switch self.token {
-		case LESS, LESS_OR_EQUAL, GREATER, GREATER_OR_EQUAL:
-			left = &BinaryExpression{
+		case token.LESS, token.LESS_OR_EQUAL, token.GREATER, token.GREATER_OR_EQUAL:
+			left = &ast.BinaryExpression{
 				Operator: self.expectToken(self.token),
 				Left:     left,
 				Right:    self.parseAdditiveExpression(),
@@ -100,13 +102,13 @@ func (self *Parser) parseRelationalExpression() Expression {
 	}
 }
 
-func (parser *Parser) parseAdditiveExpression() Expression {
+func (parser *Parser) parseAdditiveExpression() ast.Expression {
 	left := parser.parseMultiplicativeExpression()
 
 	for {
 		switch parser.token {
-		case ADDITION, SUBTRACT:
-			left = &BinaryExpression{
+		case token.ADDITION, token.SUBTRACT:
+			left = &ast.BinaryExpression{
 				Operator: parser.expectToken(parser.token),
 				Left:     left,
 				Right:    parser.parseMultiplicativeExpression(),
@@ -117,13 +119,13 @@ func (parser *Parser) parseAdditiveExpression() Expression {
 	}
 }
 
-func (parser *Parser) parseMultiplicativeExpression() Expression {
+func (parser *Parser) parseMultiplicativeExpression() ast.Expression {
 	left := parser.parseUnaryExpression()
 
 	for {
 		switch parser.token {
-		case MULTIPLY, DIVIDE, REMAINDER:
-			left = &BinaryExpression{
+		case token.MULTIPLY, token.DIVIDE, token.REMAINDER:
+			left = &ast.BinaryExpression{
 				Operator: parser.expectToken(parser.token),
 				Left:     left,
 				Right:    parser.parseUnaryExpression(),
@@ -134,12 +136,12 @@ func (parser *Parser) parseMultiplicativeExpression() Expression {
 	}
 }
 
-func (parser *Parser) parseUnaryExpression() Expression {
+func (parser *Parser) parseUnaryExpression() ast.Expression {
 
 	tkn := parser.token
 	switch tkn {
-	case NOT, ADDITION, SUBTRACT:
-		unaryExpression := &UnaryExpression{
+	case token.NOT, token.ADDITION, token.SUBTRACT:
+		unaryExpression := &ast.UnaryExpression{
 			Index:    parser.expect(tkn),
 			Operator: tkn,
 			Operand:  parser.parseUnaryExpression(),
@@ -147,13 +149,13 @@ func (parser *Parser) parseUnaryExpression() Expression {
 		return unaryExpression
 	}
 
-	left := parser.parseLeftHandSideExpressionAllowCall([]Token{})
+	left := parser.parseLeftHandSideExpressionAllowCall([]token.Token{})
 
 	return left
 }
 
-func (parser *Parser) parseLeftHandSideExpressionAllowCall(stopTokens []Token) (left Expression) {
-	isStopToken := func(token Token) bool {
+func (parser *Parser) parseLeftHandSideExpressionAllowCall(stopTokens []token.Token) (left ast.Expression) {
+	isStopToken := func(token token.Token) bool {
 		for _, stopToken := range stopTokens {
 			if token == stopToken {
 				return true
@@ -166,8 +168,8 @@ func (parser *Parser) parseLeftHandSideExpressionAllowCall(stopTokens []Token) (
 
 	for !isStopToken(parser.token) {
 		switch parser.token {
-		case LEFT_PARENTHESIS:
-			if columnName, ok := left.(*ColumnName); ok {
+		case token.LEFT_PARENTHESIS:
+			if columnName, ok := left.(*ast.ColumnName); ok {
 				left = columnName.Name
 			}
 			left = parser.parseCallExpression(left)
@@ -179,35 +181,35 @@ func (parser *Parser) parseLeftHandSideExpressionAllowCall(stopTokens []Token) (
 	return left
 }
 
-func (self *Parser) parsePrimaryExpression() Expression {
-	var expr Expression
+func (self *Parser) parsePrimaryExpression() ast.Expression {
+	var expr ast.Expression
 
 	switch self.token {
-	case NUMBER:
+	case token.NUMBER:
 		expr = self.parseNumberLiteral()
-	case STRING:
+	case token.STRING:
 		expr = self.parseStringLiteral()
-	case BOOLEAN:
+	case token.BOOLEAN:
 		expr = self.parseBooleanLiteral()
-	case NULL:
+	case token.NULL:
 		expr = self.parseNullLiteral()
-	case IDENTIFIER:
+	case token.IDENTIFIER:
 		if self.scope.inSelectField || self.scope.inWhere {
 			expr = self.parseColumnName()
 		} else {
 			expr = self.parseIdentifier()
 		}
-	case LEFT_PARENTHESIS:
+	case token.LEFT_PARENTHESIS:
 		expr = self.parseSubqueryExpression()
-	case AT_IDENTIFIER:
-		atIndex := self.expect(AT_IDENTIFIER)
-		if self.token == AT_IDENTIFIER {
+	case token.AT_IDENTIFIER:
+		atIndex := self.expect(token.AT_IDENTIFIER)
+		if self.token == token.AT_IDENTIFIER {
 			expr = self.parseVariableRef(atIndex)
 		} else {
 			expr = self.parseVariableName(atIndex)
 		}
 	default:
-		if _, ok := IsKeyword(self.literal); ok {
+		if _, ok := token.IsKeyword(self.literal); ok {
 			expr = self.parseKeyWordIdentifier(self.token)
 		} else {
 			self.errorUnexpectedToken(self.token)
@@ -217,13 +219,13 @@ func (self *Parser) parsePrimaryExpression() Expression {
 	return expr
 }
 
-func (self *Parser) parseNumberLiteral() *NumberLiteral {
-	defer self.expect(NUMBER)
-	numberLiteral := &NumberLiteral{
+func (self *Parser) parseNumberLiteral() *ast.NumberLiteral {
+	defer self.expect(token.NUMBER)
+	numberLiteral := &ast.NumberLiteral{
 		Index:   self.index,
 		Literal: self.literal,
 	}
-	numberLiteral.Value, numberLiteral.isDecimal = self.parseNumberLiteralValue(self.value)
+	numberLiteral.Value, numberLiteral.IsDecimal = self.parseNumberLiteralValue(self.value)
 	return numberLiteral
 }
 
@@ -247,64 +249,64 @@ func (self *Parser) parseNumberLiteralValue(literal string) (any, bool) {
 	return value, false
 }
 
-func (self *Parser) parseStringLiteral() *StringLiteral {
-	defer self.expectToken(STRING)
-	return &StringLiteral{
+func (self *Parser) parseStringLiteral() *ast.StringLiteral {
+	defer self.expectToken(token.STRING)
+	return &ast.StringLiteral{
 		Index:   self.index,
 		Literal: self.literal,
 		Value:   self.value,
 	}
 }
 
-func (self *Parser) parseBooleanLiteral() *BooleanLiteral {
-	defer self.expectToken(BOOLEAN)
-	return &BooleanLiteral{
+func (self *Parser) parseBooleanLiteral() *ast.BooleanLiteral {
+	defer self.expectToken(token.BOOLEAN)
+	return &ast.BooleanLiteral{
 		Index: self.index,
 		Value: self.value == "true",
 	}
 }
 
-func (self *Parser) parseNullLiteral() *NullLiteral {
-	defer self.expectToken(NULL)
-	return &NullLiteral{
+func (self *Parser) parseNullLiteral() *ast.NullLiteral {
+	defer self.expectToken(token.NULL)
+	return &ast.NullLiteral{
 		Index: self.index,
 	}
 }
 
-func (self *Parser) parseIdentifier() *Identifier {
-	defer self.expectToken(IDENTIFIER)
-	return &Identifier{
+func (self *Parser) parseIdentifier() *ast.Identifier {
+	defer self.expectToken(token.IDENTIFIER)
+	return &ast.Identifier{
 		Index: self.index,
 		Name:  self.value,
 	}
 }
 
-func (self *Parser) parseKeyWordIdentifier(keyword Token) *Identifier {
+func (self *Parser) parseKeyWordIdentifier(keyword token.Token) *ast.Identifier {
 	defer self.expectToken(keyword)
-	return &Identifier{
+	return &ast.Identifier{
 		Index: self.index,
 		Name:  self.value,
 	}
 }
 
-func (self *Parser) parseVariableRef(atIndex uint64) *VariableRef {
-	self.expectToken(AT_IDENTIFIER)
-	return &VariableRef{
+func (self *Parser) parseVariableRef(atIndex uint64) *ast.VariableRef {
+	self.expectToken(token.AT_IDENTIFIER)
+	return &ast.VariableRef{
 		AtIndex: atIndex,
 		Name:    self.parseIdentifier(),
 	}
 }
 
-func (self *Parser) parseVariableName(atIndex uint64) *VariableName {
-	return &VariableName{
+func (self *Parser) parseVariableName(atIndex uint64) *ast.VariableName {
+	return &ast.VariableName{
 		AtIndex: atIndex,
 		Name:    self.parseIdentifier(),
 	}
 }
 
-func (self *Parser) parseCallExpression(left Expression) Expression {
+func (self *Parser) parseCallExpression(left ast.Expression) ast.Expression {
 	leftParenthesis, arguments, rightParenthesis := self.parseArguments()
-	return &CallExpression{
+	return &ast.CallExpression{
 		Callee:           left,
 		LeftParenthesis:  leftParenthesis,
 		Arguments:        arguments,
@@ -312,50 +314,50 @@ func (self *Parser) parseCallExpression(left Expression) Expression {
 	}
 }
 
-func (self *Parser) parseArguments() (leftParenthesis uint64, arguments []Expression, rightParenthesis uint64) {
-	leftParenthesis = self.expect(LEFT_PARENTHESIS)
-	for self.token != RIGHT_PARENTHESIS {
+func (self *Parser) parseArguments() (leftParenthesis uint64, arguments []ast.Expression, rightParenthesis uint64) {
+	leftParenthesis = self.expect(token.LEFT_PARENTHESIS)
+	for self.token != token.RIGHT_PARENTHESIS {
 		arguments = append(arguments, self.parseExpression())
-		if self.token != COMMA {
+		if self.token != token.COMMA {
 			break
 		}
-		self.expect(COMMA)
+		self.expect(token.COMMA)
 	}
-	rightParenthesis = self.expect(RIGHT_PARENTHESIS)
+	rightParenthesis = self.expect(token.RIGHT_PARENTHESIS)
 	return
 }
 
-func (self *Parser) parseTableName() *TableName {
-	tableName := &TableName{
+func (self *Parser) parseTableName() *ast.TableName {
+	tableName := &ast.TableName{
 		Name: self.parseIdentifier(),
 	}
-	if self.expectEqualsToken(DOT) {
+	if self.expectEqualsToken(token.DOT) {
 		tableName.Schema = tableName.Name
 		tableName.Name = self.parseIdentifier()
 	}
 	return tableName
 }
 
-func (self *Parser) parseTableNames() (names []*TableName) {
+func (self *Parser) parseTableNames() (names []*ast.TableName) {
 	for {
 		names = append(names, self.parseTableName())
-		if self.token != COMMA {
+		if self.token != token.COMMA {
 			break
 		}
-		self.expectToken(COMMA)
+		self.expectToken(token.COMMA)
 	}
 	return
 }
 
-func (self *Parser) parseColumnName() *ColumnName {
-	columnName := &ColumnName{
+func (self *Parser) parseColumnName() *ast.ColumnName {
+	columnName := &ast.ColumnName{
 		Name: self.parseIdentifier(),
 	}
-	if self.expectEqualsToken(DOT) {
+	if self.expectEqualsToken(token.DOT) {
 		columnName.Table = columnName.Name
 		columnName.Name = self.parseIdentifier()
 	}
-	if self.expectEqualsToken(DOT) {
+	if self.expectEqualsToken(token.DOT) {
 		columnName.Schema = columnName.Table
 		columnName.Table = columnName.Name
 		columnName.Name = self.parseIdentifier()
@@ -363,29 +365,29 @@ func (self *Parser) parseColumnName() *ColumnName {
 	return columnName
 }
 
-func (self *Parser) parseColumnNames() (names []*ColumnName) {
+func (self *Parser) parseColumnNames() (names []*ast.ColumnName) {
 	for {
 		names = append(names, self.parseColumnName())
-		if self.token != COMMA {
+		if self.token != token.COMMA {
 			break
 		}
-		self.expectToken(COMMA)
+		self.expectToken(token.COMMA)
 	}
 	return
 }
 
-func (self *Parser) parseWhereExpression() Expression {
+func (self *Parser) parseWhereExpression() ast.Expression {
 	self.scope.inWhere = true
 	expr := self.parseExpression()
 	self.scope.inWhere = false
 	return expr
 }
 
-func (self *Parser) parsePrimaryResultSet() ResultSet {
+func (self *Parser) parsePrimaryResultSet() ast.ResultSet {
 	switch self.token {
-	case LEFT_PARENTHESIS:
+	case token.LEFT_PARENTHESIS:
 		return self.parseSubqueryExpression()
-	case IDENTIFIER:
+	case token.IDENTIFIER:
 		return self.parseTableSource()
 	default:
 		self.errorUnexpectedMsg(fmt.Sprintf("Unexpected result set: %v", self.token))
@@ -393,12 +395,12 @@ func (self *Parser) parsePrimaryResultSet() ResultSet {
 	}
 }
 
-func (self *Parser) parseResultSet() ResultSet {
+func (self *Parser) parseResultSet() ast.ResultSet {
 	left := self.parsePrimaryResultSet()
 
 	for {
 		switch self.token {
-		case COMMA, JOIN, INNER, LEFT, RIGHT:
+		case token.COMMA, token.JOIN, token.INNER, token.LEFT, token.RIGHT:
 			left = self.parseJoin(left)
 		default:
 			return left
@@ -406,59 +408,59 @@ func (self *Parser) parseResultSet() ResultSet {
 	}
 }
 
-func (self *Parser) parseJoin(left ResultSet) ResultSet {
-	join := &Join{
+func (self *Parser) parseJoin(left ast.ResultSet) ast.ResultSet {
+	join := &ast.Join{
 		Left: left,
 	}
 	switch self.token {
-	case COMMA:
-		self.expectToken(COMMA)
-		join.JoinType = CrossJoin
-	case JOIN, INNER:
-		if self.token == INNER {
-			self.expectToken(INNER)
+	case token.COMMA:
+		self.expectToken(token.COMMA)
+		join.JoinType = ast.CrossJoin
+	case token.JOIN, token.INNER:
+		if self.token == token.INNER {
+			self.expectToken(token.INNER)
 		}
-		self.expectToken(JOIN)
-		join.JoinType = InnerJoin
-	case LEFT:
-		self.expectToken(LEFT)
-		self.expectToken(JOIN)
-		join.JoinType = LeftJoin
-	case RIGHT:
-		self.expectToken(RIGHT)
-		self.expectToken(JOIN)
-		join.JoinType = RightJoin
+		self.expectToken(token.JOIN)
+		join.JoinType = ast.InnerJoin
+	case token.LEFT:
+		self.expectToken(token.LEFT)
+		self.expectToken(token.JOIN)
+		join.JoinType = ast.LeftJoin
+	case token.RIGHT:
+		self.expectToken(token.RIGHT)
+		self.expectToken(token.JOIN)
+		join.JoinType = ast.RightJoin
 	}
 	if join.JoinType != 0 {
 		join.Right = self.parsePrimaryResultSet()
-		if self.token == ON {
+		if self.token == token.ON {
 			join.On = self.parseOnCondition()
 		}
 	}
 	return join
 }
 
-func (self *Parser) parseOnCondition() *OnCondition {
-	self.expectToken(ON)
-	return &OnCondition{
+func (self *Parser) parseOnCondition() *ast.OnCondition {
+	self.expectToken(token.ON)
+	return &ast.OnCondition{
 		Expr: self.parseWhereExpression(),
 	}
 }
 
-func (self *Parser) parseSubqueryExpression() ResultSet {
-	subqueryExpression := &SubqueryExpression{
-		LeftParenthesis:  self.expect(LEFT_PARENTHESIS),
+func (self *Parser) parseSubqueryExpression() ast.ResultSet {
+	subqueryExpression := &ast.SubqueryExpression{
+		LeftParenthesis:  self.expect(token.LEFT_PARENTHESIS),
 		Select:           self.parseSelectStatement(),
-		RightParenthesis: self.expect(RIGHT_PARENTHESIS),
+		RightParenthesis: self.expect(token.RIGHT_PARENTHESIS),
 	}
 	return subqueryExpression
 }
 
-func (self *Parser) parseTableSource() ResultSet {
-	tableSource := &TableSource{
+func (self *Parser) parseTableSource() ast.ResultSet {
+	tableSource := &ast.TableSource{
 		TableName: self.parseTableName(),
 	}
-	if self.expectEqualsToken(AS) || self.token == IDENTIFIER {
+	if self.expectEqualsToken(token.AS) || self.token == token.IDENTIFIER {
 		tableSource.AsName = self.parseIdentifier()
 	}
 	return tableSource

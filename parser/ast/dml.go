@@ -1,4 +1,4 @@
-package parser
+package ast
 
 type DMLStatement interface {
 	Statement

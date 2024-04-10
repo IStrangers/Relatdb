@@ -1,4 +1,4 @@
-package parser
+package ast
 
 type UseStatement struct {
 	_Statement_
