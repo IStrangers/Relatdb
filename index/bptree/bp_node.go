@@ -59,3 +59,11 @@ func (self *BPNode) Get(key *meta.IndexEntry, compareType index.CompareType) *BP
 	}
 	return nil
 }
+
+func (self *BPNode) Insert(key *meta.IndexEntry, bpTree *BPTree, isUnique bool) {
+
+}
+
+func (self *BPNode) Remove(key *meta.IndexEntry, bpTree *BPTree) {
+
+}
