@@ -1,10 +1,8 @@
 package server
 
 import (
-	"Relatdb/common"
 	"Relatdb/parser"
 	"Relatdb/parser/ast"
-	"Relatdb/protocol"
 	"Relatdb/utils"
 	"bufio"
 	"bytes"
@@ -66,7 +64,7 @@ func (self *Connection) write(bytes []byte) {
 }
 
 func (self *Connection) writeErrorMessage(packetId byte, errorCode uint16, message string) {
-	errorPacket := &protocol.ErrorPacket{}
+	errorPacket := &ErrorPacket{}
 	errorPacket.PacketId = packetId
 	errorPacket.FieldCount = 0xff
 	errorPacket.ErrorCode = errorCode
@@ -78,8 +76,8 @@ func (self *Connection) writeErrorMessage(packetId byte, errorCode uint16, messa
 }
 
 func (self *Connection) sendHandshakePacket() {
-	handshakePacket := &protocol.HandshakePacket{
-		ProtocolVersion:     common.PROTOCOL_VERSION,
+	handshakePacket := &HandshakePacket{
+		ProtocolVersion:     PROTOCOL_VERSION,
 		ServerVersion:       []byte(self.server.version),
 		ConnectionId:        1,
 		AuthPluginDataPart1: utils.RandomBytes(8),
@@ -93,21 +91,21 @@ func (self *Connection) sendHandshakePacket() {
 	self.sendDataPacket(handshakePacket)
 }
 
-func (self *Connection) sendDataPacket(dataPacket protocol.DataPacket) {
+func (self *Connection) sendDataPacket(dataPacket DataPacket) {
 	packetBytes := dataPacket.GetPacketBytes()
 	self.write(packetBytes)
 }
 
-func (self *Connection) receiveBinaryPacket() *protocol.BinaryPacket {
+func (self *Connection) receiveBinaryPacket() *BinaryPacket {
 	bytes := self.ReadBySize(3)
 	packetSize := utils.Uint32(bytes, false)
-	if packetSize <= 0 || packetSize > common.MAX_PACKET_SIZE {
+	if packetSize <= 0 || packetSize > MAX_PACKET_SIZE {
 		fmt.Println("Received packet size error:", packetSize)
 		return nil
 	}
 	packetId := self.readByte()
 	data := self.ReadBySize(packetSize)
-	binaryPacket := &protocol.BinaryPacket{}
+	binaryPacket := &BinaryPacket{}
 	binaryPacket.PacketSize = packetSize
 	binaryPacket.PacketId = packetId
 	binaryPacket.Data = data
@@ -119,9 +117,9 @@ func (self *Connection) authentication() bool {
 	if binaryPacket == nil {
 		return false
 	}
-	authPacket := protocol.LoadAuthPacket(binaryPacket)
+	authPacket := LoadAuthPacket(binaryPacket)
 	if !checkUserNamePassword(authPacket.UserName, authPacket.Password, self.authPluginDataPart) {
-		self.writeErrorMessage(2, common.ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", authPacket.UserName))
+		self.writeErrorMessage(2, ER_ACCESS_DENIED_ERROR, fmt.Sprintf("Access denied for user '%s'", authPacket.UserName))
 		return false
 	}
 	self.clientCapabilities = authPacket.ClientFlags
@@ -132,10 +130,10 @@ func (self *Connection) authentication() bool {
 }
 
 func checkUserNamePassword(userName string, password []byte, authPluginDataPart []byte) bool {
-	if userName != common.SERVER_ROOT_USERNAME || password == nil || len(password) == 0 {
+	if userName != SERVER_ROOT_USERNAME || password == nil || len(password) == 0 {
 		return false
 	}
-	rootPassword := scramble411([]byte(common.SERVER_ROOT_PASSWORD), authPluginDataPart)
+	rootPassword := scramble411([]byte(SERVER_ROOT_PASSWORD), authPluginDataPart)
 	return bytes.Equal(rootPassword, password)
 }
 
@@ -161,7 +159,7 @@ func scramble411(data []byte, seed []byte) []byte {
 }
 
 func (self *Connection) writeAuthOK() {
-	self.write(common.SERVER_AUTH_OK)
+	self.write(SERVER_AUTH_OK)
 }
 
 func (self *Connection) receiveCommandHandler() {
@@ -172,42 +170,42 @@ func (self *Connection) receiveCommandHandler() {
 		}
 		bytesReader := utils.NewBytesReader(binaryPacket.Data)
 		switch bytesReader.ReadByte() {
-		case common.COM_INIT_DB:
+		case COM_INIT_DB:
 			self.handlingInitDB(string(bytesReader.ReadRemainingBytes()))
 			break
-		case common.COM_QUERY:
+		case COM_QUERY:
 			self.handlingQuery(string(bytesReader.ReadRemainingBytes()))
 			break
-		case common.COM_PING:
+		case COM_PING:
 			self.ping()
 			break
-		case common.COM_QUIT:
+		case COM_QUIT:
 			self.close()
 			break
-		case common.COM_PROCESS_KILL:
+		case COM_PROCESS_KILL:
 			self.kill()
 			break
-		case common.COM_STMT_PREPARE:
+		case COM_STMT_PREPARE:
 			self.handlingStmtPrepare()
 			break
-		case common.COM_STMT_EXECUTE:
+		case COM_STMT_EXECUTE:
 			self.handlingStmtExecute()
 			break
-		case common.COM_STMT_CLOSE:
+		case COM_STMT_CLOSE:
 			self.handlingStmtClose()
 			break
-		case common.COM_HEARTBEAT:
+		case COM_HEARTBEAT:
 			self.heartbeat()
 			break
 		default:
-			self.writeErrorMessage(1, common.ER_UNKNOWN_COM_ERROR, "Unknown command")
+			self.writeErrorMessage(1, ER_UNKNOWN_COM_ERROR, "Unknown command")
 			break
 		}
 	}
 }
 
 func (self *Connection) writeOk() {
-	self.write(common.SERVER_OK)
+	self.write(SERVER_OK)
 }
 
 func (self *Connection) ping() {
@@ -244,7 +242,7 @@ func (self *Connection) handlingQuery(querySql string) {
 	parser := parser.CreateParser(1, querySql, true, true)
 	stmts := parser.Parse()
 	stmtLength := len(stmts)
-	if stmtLength > 1 && self.clientCapabilities&common.CLIENT_MULTI_STATEMENTS == 0 {
+	if stmtLength > 1 && self.clientCapabilities&CLIENT_MULTI_STATEMENTS == 0 {
 		//return
 	}
 	for i, stmt := range stmts {

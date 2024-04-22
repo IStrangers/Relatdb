@@ -1,6 +1,8 @@
 package token
 
-import "Relatdb/common"
+import (
+	"Relatdb/common"
+)
 
 type Token int
 

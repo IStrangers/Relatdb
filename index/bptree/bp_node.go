@@ -3,6 +3,8 @@ package bptree
 import (
 	"Relatdb/index"
 	"Relatdb/meta"
+	"Relatdb/store"
+	"errors"
 )
 
 type BPNode struct {
@@ -10,10 +12,10 @@ type BPNode struct {
 	IsRoot    bool
 	isLeaf    bool
 	Parent    *BPNode
-	prev      *BPNode
-	next      *BPNode
+	Prev      *BPNode
+	Next      *BPNode
 	Entries   []*meta.IndexEntry
-	children  []*BPNode
+	Children  []*BPNode
 	Page      *BPPage
 }
 
@@ -25,9 +27,26 @@ func CreateBPNode(ownerTree *BPTree, isRoot bool, isLeaf bool) *BPNode {
 		Entries:   []*meta.IndexEntry{},
 	}
 	if !isLeaf {
-		bpNode.children = make([]*BPNode, 3)
+		bpNode.Children = make([]*BPNode, 3)
 	}
 	return bpNode
+}
+
+func (self *BPNode) getBorrowKeyLength(key *meta.IndexEntry) uint {
+	itemLength := index.GetItemLength(key)
+	if !self.isLeaf {
+		itemLength += store.ITEM_INT_LENGTH
+	}
+	return itemLength
+}
+
+func (self *BPNode) innerCheckExist(key *meta.IndexEntry) bool {
+	for _, entry := range self.Entries {
+		if key.GetCompareEntry().Compare(entry) == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (self *BPNode) Get(key *meta.IndexEntry, compareType index.CompareType) *BPPosition {
@@ -46,22 +65,28 @@ func (self *BPNode) Get(key *meta.IndexEntry, compareType index.CompareType) *BP
 		}
 	}
 	if firstEntry := self.Entries[0]; key.Compare(firstEntry) < 0 {
-		return self.children[0].Get(key, compareType)
+		return self.Children[0].Get(key, compareType)
 	} else if lastEntry := self.Entries[len(self.Entries)-1]; key.Compare(lastEntry) >= 0 {
-		return self.children[len(self.children)-1].Get(key, compareType)
+		return self.Children[len(self.Children)-1].Get(key, compareType)
 	} else {
 		for i, entry := range self.Entries {
 			if key.Compare(entry) > -1 {
 				continue
 			}
-			return self.children[i].Get(key, compareType)
+			return self.Children[i].Get(key, compareType)
 		}
 	}
 	return nil
 }
 
-func (self *BPNode) Insert(key *meta.IndexEntry, bpTree *BPTree, isUnique bool) {
+func (self *BPNode) Insert(key *meta.IndexEntry, bpTree *BPTree, isUnique bool) error {
+	if self.getBorrowKeyLength(key) > self.Page.getInitFreeSpace()/3 {
+		return errors.New("entry size must <= Max/3")
+	} else if isUnique && self.innerCheckExist(key) {
+		return errors.New("Duplicated Key error")
+	}
 
+	return nil
 }
 
 func (self *BPNode) Remove(key *meta.IndexEntry, bpTree *BPTree) {

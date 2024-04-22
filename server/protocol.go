@@ -1,7 +1,6 @@
-package protocol
+package server
 
 import (
-	"Relatdb/common"
 	"Relatdb/utils"
 	"bytes"
 	"encoding/binary"
@@ -116,10 +115,10 @@ func LoadAuthPacket(packet *BinaryPacket) *AuthPacket {
 	} else {
 		authPacket.Password = []byte{}
 	}
-	if authPacket.ClientFlags&common.CLIENT_CONNECT_WITH_DB != 0 {
+	if authPacket.ClientFlags&CLIENT_CONNECT_WITH_DB != 0 {
 		authPacket.DataBase = string(bytesReader.ReadToZero())
 	}
-	if authPacket.ClientFlags&common.CLIENT_PLUGIN_AUTH != 0 {
+	if authPacket.ClientFlags&CLIENT_PLUGIN_AUTH != 0 {
 		authPacket.AuthPluginName = string(bytesReader.ReadToZero())
 	}
 	return authPacket

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"Relatdb/common"
 	"fmt"
 	"net"
 )
@@ -22,7 +21,7 @@ type Server struct {
 
 func CreateServer(options *Options) *Server {
 	server := &Server{
-		version: common.SERVER_VERSION,
+		version: SERVER_VERSION,
 		options: options,
 
 		autoConnId: 0,
@@ -60,22 +59,22 @@ func (self *Server) Stop() {
 
 func (self *Server) getServerCapabilities() uint32 {
 	flag := uint32(0)
-	flag |= common.CLIENT_LONG_PASSWORD
-	flag |= common.CLIENT_FOUND_ROWS
-	flag |= common.CLIENT_LONG_FLAG
-	flag |= common.CLIENT_CONNECT_WITH_DB
+	flag |= CLIENT_LONG_PASSWORD
+	flag |= CLIENT_FOUND_ROWS
+	flag |= CLIENT_LONG_FLAG
+	flag |= CLIENT_CONNECT_WITH_DB
 	// flag |=  common.CLIENT_NO_SCHEMA;
 	// flag |=  common.CLIENT_COMPRESS;
-	flag |= common.CLIENT_ODBC
+	flag |= CLIENT_ODBC
 	// flag |=  common.CLIENT_LOCAL_FILES;
-	flag |= common.CLIENT_IGNORE_SPACE
-	flag |= common.CLIENT_PROTOCOL_41
-	flag |= common.CLIENT_INTERACTIVE
+	flag |= CLIENT_IGNORE_SPACE
+	flag |= CLIENT_PROTOCOL_41
+	flag |= CLIENT_INTERACTIVE
 	// flag |=  common.CLIENT_SSL;
-	flag |= common.CLIENT_IGNORE_SIGPIPE
-	flag |= common.CLIENT_TRANSACTIONS
-	flag |= common.CLIENT_SECURE_CONNECTION
-	flag |= common.CLIENT_PLUGIN_AUTH
+	flag |= CLIENT_IGNORE_SIGPIPE
+	flag |= CLIENT_TRANSACTIONS
+	flag |= CLIENT_SECURE_CONNECTION
+	flag |= CLIENT_PLUGIN_AUTH
 	return flag
 }
 
