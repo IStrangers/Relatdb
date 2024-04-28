@@ -126,7 +126,17 @@ func (self *BPNode) Insert(key *meta.IndexEntry, bpTree *BPTree, isUnique bool) 
 		right.Prev = left
 		self.Prev = nil
 		self.Next = nil
+
 		self.innerInsert(key)
+		leftSize := len(self.Entries) / 2
+		rightSize := len(self.Entries) - leftSize
+		for i := range leftSize {
+			left.Entries = append(left.Entries, self.Entries[i])
+		}
+		for i := range rightSize {
+			right.Entries = append(right.Entries, self.Entries[leftSize+i])
+		}
+
 		return nil
 	}
 	if key.Compare(self.Entries[0]) < 0 {
