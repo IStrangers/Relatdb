@@ -1,8 +1,9 @@
 package bptree
 
+import "Relatdb/index"
+
 type BPTree struct {
-}
-
-func (self BPTree) setHead(node *BPNode) {
-
+	index.BaseIndex
+	Root *BPNode
+	Head *BPNode
 }

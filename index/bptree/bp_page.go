@@ -6,6 +6,7 @@ import (
 )
 
 type BPPage struct {
+	PageNo            uint
 	Node              *BPNode
 	NodeInitFreeSpace uint
 	LeafInitFreeSpace uint

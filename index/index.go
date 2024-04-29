@@ -14,6 +14,6 @@ const (
 	COMPARE_UP
 )
 
-func GetItemLength(indexEntry *meta.IndexEntry) uint {
+func GetItemLength(indexEntry meta.IndexEntry) uint {
 	return store.ITEM_POINTER_LENGTH + indexEntry.GetLength()
 }
