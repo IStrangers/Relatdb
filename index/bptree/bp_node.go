@@ -346,6 +346,7 @@ func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) bool {
 		if self.IsRoot {
 			return removeOk
 		}
+		defer self.internalMerge(bpTree)
 		//不平衡的叶子节点，不能直接删除
 		if !self.isBalancedLeaf(key) {
 			if self.prevLeafCanBorrow() { //上一个叶子节点是否可借用
@@ -355,18 +356,19 @@ func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) bool {
 				//更新key到父节点Entries
 				index := self.findChildrenIndex(self)
 				self.Parent.setEntriesByIndex(uint(index), key)
-			} else if self.nextLeafCanBorrow() { //下一个叶子节点是否可借用
+				return removeOk
+			}
+			if self.nextLeafCanBorrow() { //下一个叶子节点是否可借用
 				//借用Next第一个key添加到当前Entries最后面
 				key := self.Next.removeEntriesByIndex(0)
 				self.addEntries(key)
 				//将Next的第一个key上提到父节点Entries
 				index := self.findChildrenIndex(self.Next)
 				self.Parent.setEntriesByIndex(uint(index), self.Next.Entries[0])
-			} else {
-
+				return removeOk
 			}
+
 		}
-		self.internalMerge(bpTree)
 		return removeOk
 	}
 	//非叶子节点
