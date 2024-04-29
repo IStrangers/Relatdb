@@ -33,8 +33,31 @@ func CreateBPNode(ownerTree *BPTree, isRoot bool, isLeaf bool) *BPNode {
 	return bpNode
 }
 
+func (self *BPNode) addEntries(key meta.IndexEntry) {
+	self.Entries = append(self.Entries, key)
+}
+
 func (self *BPNode) addEntriesByIndex(index uint, key meta.IndexEntry) {
 	self.Entries = slices.Insert(self.Entries, int(index), key)
+}
+
+func (self *BPNode) findDeleteEntriesIndex(key meta.IndexEntry) int {
+	for i, entry := range self.Entries {
+		if entry.GetDeleteCompareEntry().CompareDeleteEntry(key) == 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+func (self *BPNode) removeEntriesByIndex(index uint) meta.IndexEntry {
+	key := self.Entries[index]
+	self.Entries = slices.Delete(self.Entries, int(index), int(index))
+	return key
+}
+
+func (self *BPNode) setEntriesByIndex(index uint, key meta.IndexEntry) {
+	self.Entries[index] = key
 }
 
 func (self *BPNode) addChildren(node *BPNode) {
@@ -68,7 +91,7 @@ func (self *BPNode) getBorrowKeyLength(key meta.IndexEntry) uint {
 
 func (self *BPNode) internalCheckExist(key meta.IndexEntry) bool {
 	for _, entry := range self.Entries {
-		if key.GetCompareEntry().Compare(entry) == 0 {
+		if key.GetCompareEntry().CompareEntry(entry) == 0 {
 			return true
 		}
 	}
@@ -94,7 +117,7 @@ func (self *BPNode) internalInsert(key meta.IndexEntry) {
 	}
 	//插入在大于等于的Entries前面
 	for i, entry := range self.Entries {
-		if key.Compare(entry) == 0 || key.Compare(entry) < 0 {
+		if key.CompareEntry(entry) == 0 || key.CompareEntry(entry) < 0 {
 			insertIndex = i
 			break
 		}
@@ -176,6 +199,43 @@ func (self *BPNode) internalSplit(bpTree *BPTree) {
 	self.handlingParent(bpTree, left, right)
 }
 
+func (self *BPNode) internalRemove(key meta.IndexEntry) bool {
+	index := self.findDeleteEntriesIndex(key)
+	if index < 0 {
+		return false
+	}
+	self.removeEntriesByIndex(uint(index))
+	return true
+}
+
+// 是否是平衡的叶子节点
+func (self *BPNode) isBalancedLeaf(key meta.IndexEntry) bool {
+	return self.Page.getContentSize()-index.GetItemLength(key) > self.Page.getInitFreeSpace()/2
+}
+
+// 上一个叶子节点是否可借用
+func (self *BPNode) prevLeafCanBorrow() bool {
+	if self.Prev == nil || len(self.Prev.Entries) < 2 || self.Prev.Parent != self.Parent {
+		return false
+	}
+	return self.isBalancedLeaf(self.Prev.Entries[len(self.Prev.Entries)-1]) ||
+		len(self.Entries) == 1 && len(self.Prev.Entries) >= 2
+}
+
+// 下一个叶子节点是否可借用
+func (self *BPNode) nextLeafCanBorrow() bool {
+	if self.Next == nil || len(self.Next.Entries) < 2 || self.Next.Parent != self.Parent {
+		return false
+	}
+	return self.isBalancedLeaf(self.Next.Entries[len(self.Next.Entries)-1]) ||
+		len(self.Entries) == 1 && len(self.Next.Entries) >= 2
+}
+
+// 内部节点合并
+func (self *BPNode) internalMerge(bpTree *BPTree) {
+
+}
+
 // 获取
 func (self *BPNode) Get(key meta.IndexEntry, compareType index.CompareType) *BPPosition {
 	//叶子节点
@@ -183,7 +243,7 @@ func (self *BPNode) Get(key meta.IndexEntry, compareType index.CompareType) *BPP
 		if compareType == index.COMPARE_EQUAL {
 			//查找相等的Entries
 			for i, entry := range self.Entries {
-				if key.Compare(entry) != 0 {
+				if key.CompareEntry(entry) != 0 {
 					continue
 				}
 				return CreateBPPosition(nil, uint(i), self)
@@ -195,14 +255,14 @@ func (self *BPNode) Get(key meta.IndexEntry, compareType index.CompareType) *BPP
 		}
 	}
 	//非叶子节点
-	if firstEntry := self.Entries[0]; key.Compare(firstEntry) < 0 { //小于第一个Entries
+	if firstEntry := self.Entries[0]; key.CompareEntry(firstEntry) < 0 { //小于第一个Entries
 		return self.Children[0].Get(key, compareType)
-	} else if lastEntry := self.Entries[len(self.Entries)-1]; key.Compare(lastEntry) >= 0 { //大于等于最后一个Entries
+	} else if lastEntry := self.Entries[len(self.Entries)-1]; key.CompareEntry(lastEntry) >= 0 { //大于等于最后一个Entries
 		return self.Children[len(self.Children)-1].Get(key, compareType)
 	}
 	//查找大于等于的Entries
 	for i, entry := range self.Entries {
-		if key.Compare(entry) != -1 {
+		if key.CompareEntry(entry) != -1 {
 			continue
 		}
 		return self.Children[i].Get(key, compareType)
@@ -258,14 +318,14 @@ func (self *BPNode) Insert(key meta.IndexEntry, bpTree *BPTree, isUnique bool) e
 		return nil
 	}
 	//非叶子节点
-	if key.Compare(self.Entries[0]) < 0 { //小于第一个Entries
+	if key.CompareEntry(self.Entries[0]) < 0 { //小于第一个Entries
 		return self.Children[0].Insert(key, bpTree, isUnique)
-	} else if key.Compare(self.Entries[len(self.Entries)-1]) >= 0 { //大于等于最后一个Entries
+	} else if key.CompareEntry(self.Entries[len(self.Entries)-1]) >= 0 { //大于等于最后一个Entries
 		return self.Children[len(self.Children)-1].Insert(key, bpTree, isUnique)
 	}
 	//查找大于等于的Entries
 	for i, entry := range self.Entries {
-		if key.Compare(entry) != -1 {
+		if key.CompareEntry(entry) != -1 {
 			continue
 		}
 		return self.Children[i].Insert(key, bpTree, isUnique)
@@ -274,6 +334,53 @@ func (self *BPNode) Insert(key meta.IndexEntry, bpTree *BPTree, isUnique bool) e
 }
 
 // 删除
-func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) {
+func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) bool {
+	//叶子节点
+	if self.isLeaf {
+		//不包含key直接返回
+		if self.findDeleteEntriesIndex(key) == -1 {
+			return false
+		}
+		removeOk := self.internalRemove(key)
+		//叶子节点并且根节点，表明只有一个节点
+		if self.IsRoot {
+			return removeOk
+		}
+		//不平衡的叶子节点，不能直接删除
+		if !self.isBalancedLeaf(key) {
+			if self.prevLeafCanBorrow() { //上一个叶子节点是否可借用
+				//借用Prev最后一个key添加到当前Entries最前面
+				key := self.Prev.removeEntriesByIndex(uint(len(self.Prev.Entries) - 1))
+				self.addEntriesByIndex(0, key)
+				//更新key到父节点Entries
+				index := self.findChildrenIndex(self)
+				self.Parent.setEntriesByIndex(uint(index), key)
+			} else if self.nextLeafCanBorrow() { //下一个叶子节点是否可借用
+				//借用Next第一个key添加到当前Entries最后面
+				key := self.Next.removeEntriesByIndex(0)
+				self.addEntries(key)
+				//将Next的第一个key上提到父节点Entries
+				index := self.findChildrenIndex(self.Next)
+				self.Parent.setEntriesByIndex(uint(index), self.Next.Entries[0])
+			} else {
 
+			}
+		}
+		self.internalMerge(bpTree)
+		return removeOk
+	}
+	//非叶子节点
+	if key.CompareEntry(self.Entries[0]) < 0 { //小于第一个Entries
+		return self.Children[0].Remove(key, bpTree)
+	} else if key.CompareEntry(self.Entries[len(self.Entries)-1]) >= 0 { //大于等于最后一个Entries
+		return self.Children[len(self.Children)-1].Remove(key, bpTree)
+	}
+	//查找大于等于的Entries
+	for i, entry := range self.Entries {
+		if key.CompareEntry(entry) != -1 {
+			continue
+		}
+		return self.Children[i].Remove(key, bpTree)
+	}
+	return false
 }

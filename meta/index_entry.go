@@ -6,14 +6,15 @@ type IndexEntry interface {
 	GetLength() uint
 	GetCompareEntry() IndexEntry
 	GetDeleteCompareEntry() IndexEntry
-	Compare(IndexEntry) int8
+	CompareEntry(IndexEntry) int8
+	CompareDeleteEntry(IndexEntry) int8
 }
 
 type BaseIndexEntry struct {
-	Values       []Value
-	Desc         *IndexDesc
-	CompareEntry IndexEntry
-	IsAllNull    bool
+	Values     []Value
+	Desc       *IndexDesc
+	IndexEntry IndexEntry
+	IsAllNull  bool
 }
 
 func CreateIndexEntry(values []Value, desc *IndexDesc) *BaseIndexEntry {
@@ -72,17 +73,21 @@ func (self *BaseIndexEntry) GetLength() uint {
 
 func (self *BaseIndexEntry) GetCompareEntry() IndexEntry {
 	if self.CompareEntry == nil {
-		self.CompareEntry = CreateNotLeafIndexEntry(self.Values[:], self.Desc)
+		self.IndexEntry = CreateNotLeafIndexEntry(self.Values[:], self.Desc)
 	}
-	return self.CompareEntry
+	return self.IndexEntry
 }
 
 func (self *BaseIndexEntry) GetDeleteCompareEntry() IndexEntry {
 	return self
 }
 
-func (self *BaseIndexEntry) Compare(compareEntry IndexEntry) int8 {
+func (self *BaseIndexEntry) CompareEntry(compareEntry IndexEntry) int8 {
 	return self.innerCompare(compareEntry.GetCompareEntry())
+}
+
+func (self *BaseIndexEntry) CompareDeleteEntry(compareEntry IndexEntry) int8 {
+	return self.innerCompare(compareEntry.GetDeleteCompareEntry())
 }
 
 type NotLeafIndexEntry struct {
@@ -116,9 +121,9 @@ func (self *ClusterIndexEntry) GetCompareEntry() IndexEntry {
 		primaryAttr := self.Desc.PrimaryAttr
 		rowId := self.Values[primaryAttr.Index]
 		desc := CreateIndexDesc([]*Attribute{primaryAttr})
-		self.CompareEntry = CreateNotLeafIndexEntry([]Value{rowId}, desc)
+		self.IndexEntry = CreateNotLeafIndexEntry([]Value{rowId}, desc)
 	}
-	return self.CompareEntry
+	return self.IndexEntry
 }
 
 func (self *ClusterIndexEntry) GetDeleteCompareEntry() IndexEntry {
