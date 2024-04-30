@@ -33,12 +33,12 @@ func CreateBPNode(ownerTree *BPTree, isRoot bool, isLeaf bool) *BPNode {
 	return bpNode
 }
 
-func (self *BPNode) addEntries(key meta.IndexEntry) {
-	self.Entries = append(self.Entries, key)
+func (self *BPNode) addEntries(key ...meta.IndexEntry) {
+	self.Entries = append(self.Entries, key...)
 }
 
-func (self *BPNode) addEntriesByIndex(index uint, key meta.IndexEntry) {
-	self.Entries = slices.Insert(self.Entries, int(index), key)
+func (self *BPNode) addEntriesByIndex(index uint, key ...meta.IndexEntry) {
+	self.Entries = slices.Insert(self.Entries, int(index), key...)
 }
 
 func (self *BPNode) findDeleteEntriesIndex(key meta.IndexEntry) int {
@@ -60,12 +60,12 @@ func (self *BPNode) setEntriesByIndex(index uint, key meta.IndexEntry) {
 	self.Entries[index] = key
 }
 
-func (self *BPNode) addChildren(node *BPNode) {
-	self.Children = append(self.Children, node)
+func (self *BPNode) addChildren(node ...*BPNode) {
+	self.Children = append(self.Children, node...)
 }
 
-func (self *BPNode) addChildrenByIndex(index uint, node *BPNode) {
-	self.Children = slices.Insert(self.Children, int(index), node)
+func (self *BPNode) addChildrenByIndex(index uint, node ...*BPNode) {
+	self.Children = slices.Insert(self.Children, int(index), node...)
 }
 
 func (self *BPNode) findChildrenIndex(node *BPNode) int {
@@ -127,9 +127,14 @@ func (self *BPNode) internalInsert(key meta.IndexEntry) {
 
 // 回收
 func (self *BPNode) recycle() {
+	self.OwnerTree.RecyclePageNo(self.Page.PageNo)
+	self.OwnerTree = nil
+	self.Parent = nil
+	self.Prev = nil
+	self.Next = nil
 	self.Entries = nil
 	self.Children = nil
-	self.OwnerTree.RecyclePageNo(self.Page.PageNo)
+	self.Page = nil
 }
 
 func (self *BPNode) handlingParent(bpTree *BPTree, left *BPNode, right *BPNode) {
@@ -229,6 +234,49 @@ func (self *BPNode) nextLeafCanBorrow() bool {
 	}
 	return self.isBalancedLeaf(self.Next.Entries[len(self.Next.Entries)-1]) ||
 		len(self.Entries) == 1 && len(self.Next.Entries) >= 2
+}
+
+// 叶子节点是否可合并
+func (self *BPNode) leafCanMerge(leaf *BPNode) bool {
+	return leaf != nil && leaf.Parent == self.Parent &&
+		leaf.Page.getContentSize() < leaf.Page.getInitFreeSpace()/2 &&
+		leaf.Page.getContentSize() <= self.Page.remainFreeSpace()
+}
+
+// 合并Prev节点
+func (self *BPNode) mergePrevNode(prev *BPNode) {
+	if !prev.isLeaf {
+		index := self.Parent.findChildrenIndex(self)
+		self.addEntriesByIndex(0, self.Parent.Entries[index])
+		for _, child := range prev.Children {
+			child.Parent = self
+		}
+		self.addChildrenByIndex(0, prev.Children...)
+	}
+	self.addEntriesByIndex(0, prev.Entries...)
+}
+
+// 合并Next节点
+func (self *BPNode) mergeNextNode(next *BPNode) {
+	if !next.isLeaf {
+		index := self.Parent.findChildrenIndex(next)
+		self.addEntries(next.Parent.Entries[index])
+	}
+	self.addEntries(next.Entries...)
+	if len(next.Children) != 0 {
+		for _, child := range next.Children {
+			child.Parent = self
+		}
+		self.addChildren(next.Children...)
+	}
+}
+
+func (self *BPNode) prevLeafCanMerge(prev *BPNode) bool {
+	return true
+}
+
+func (self *BPNode) nextLeafCanMerge(next *BPNode) bool {
+	return true
 }
 
 // 内部节点合并
@@ -349,25 +397,65 @@ func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) bool {
 		defer self.internalMerge(bpTree)
 		//不平衡的叶子节点，不能直接删除
 		if !self.isBalancedLeaf(key) {
-			if self.prevLeafCanBorrow() { //上一个叶子节点是否可借用
+			//上一个叶子节点是否可借用
+			if self.prevLeafCanBorrow() {
 				//借用Prev最后一个key添加到当前Entries最前面
 				key := self.Prev.removeEntriesByIndex(uint(len(self.Prev.Entries) - 1))
 				self.addEntriesByIndex(0, key)
 				//更新key到父节点Entries
-				index := self.findChildrenIndex(self)
+				index := self.Parent.findChildrenIndex(self)
 				self.Parent.setEntriesByIndex(uint(index), key)
 				return removeOk
 			}
-			if self.nextLeafCanBorrow() { //下一个叶子节点是否可借用
+			//下一个叶子节点是否可借用
+			if self.nextLeafCanBorrow() {
 				//借用Next第一个key添加到当前Entries最后面
 				key := self.Next.removeEntriesByIndex(0)
 				self.addEntries(key)
 				//将Next的第一个key上提到父节点Entries
-				index := self.findChildrenIndex(self.Next)
+				index := self.Parent.findChildrenIndex(self.Next)
 				self.Parent.setEntriesByIndex(uint(index), self.Next.Entries[0])
 				return removeOk
 			}
-
+			//Prev是否可合并
+			if self.leafCanMerge(self.Prev) {
+				//合并Prev节点
+				self.mergePrevNode(self.Prev)
+				//父节点删除Prev节点
+				prevIndex := self.Parent.removeChildren(self.Prev)
+				//父节点删除当前节点的key
+				self.Parent.removeEntriesByIndex(uint(prevIndex + 1))
+				//更新节点指向
+				if self.Prev.Prev != nil {
+					self.Prev = self.Prev.Prev
+					self.Prev.Next = self
+				} else {
+					self.Prev = nil
+					bpTree.Head = self
+				}
+				//回收Prev节点
+				self.Prev.recycle()
+				return removeOk
+			}
+			//Next是否可合并
+			if self.leafCanMerge(self.Next) {
+				//合并Next节点
+				self.mergeNextNode(self.Next)
+				//父节点删除Next节点
+				nextIndex := self.Parent.removeChildren(self.Next)
+				//父节点删除Next节点的key
+				self.Parent.removeEntriesByIndex(uint(nextIndex))
+				//更新节点指向
+				if self.Next.Next != nil {
+					self.Next = self.Next.Next
+					self.Next.Prev = self
+				} else {
+					self.Next = nil
+				}
+				//回收Next节点
+				self.Next.recycle()
+				return removeOk
+			}
 		}
 		return removeOk
 	}
