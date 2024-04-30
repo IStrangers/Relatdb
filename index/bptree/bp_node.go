@@ -167,7 +167,6 @@ func (self *BPNode) handlingParent(bpTree *BPTree, left *BPNode, right *BPNode) 
 		self.Parent.internalInsert(right.Entries[0].GetCompareEntry())
 		//父节点进行分裂
 		self.Parent.internalSplit(bpTree)
-		self.Parent = nil
 	}
 	//回收
 	self.recycle()
@@ -348,8 +347,6 @@ func (self *BPNode) Insert(key meta.IndexEntry, bpTree *BPTree, isUnique bool) e
 		}
 		left.Next = right
 		right.Prev = left
-		self.Prev = nil
-		self.Next = nil
 
 		//先插入key
 		self.internalInsert(key)
