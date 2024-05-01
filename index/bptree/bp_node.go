@@ -37,8 +37,8 @@ func (self *BPNode) addEntries(key ...meta.IndexEntry) {
 	self.Entries = append(self.Entries, key...)
 }
 
-func (self *BPNode) addEntriesByIndex(index uint, key ...meta.IndexEntry) {
-	self.Entries = slices.Insert(self.Entries, int(index), key...)
+func (self *BPNode) addEntriesByIndex(index int, key ...meta.IndexEntry) {
+	self.Entries = slices.Insert(self.Entries, index, key...)
 }
 
 func (self *BPNode) findDeleteEntriesIndex(key meta.IndexEntry) int {
@@ -50,13 +50,13 @@ func (self *BPNode) findDeleteEntriesIndex(key meta.IndexEntry) int {
 	return -1
 }
 
-func (self *BPNode) removeEntriesByIndex(index uint) meta.IndexEntry {
+func (self *BPNode) removeEntriesByIndex(index int) meta.IndexEntry {
 	key := self.Entries[index]
-	self.Entries = slices.Delete(self.Entries, int(index), int(index))
+	self.Entries = slices.Delete(self.Entries, index, index)
 	return key
 }
 
-func (self *BPNode) setEntriesByIndex(index uint, key meta.IndexEntry) {
+func (self *BPNode) setEntriesByIndex(index int, key meta.IndexEntry) {
 	self.Entries[index] = key
 }
 
@@ -64,8 +64,8 @@ func (self *BPNode) addChildren(node ...*BPNode) {
 	self.Children = append(self.Children, node...)
 }
 
-func (self *BPNode) addChildrenByIndex(index uint, node ...*BPNode) {
-	self.Children = slices.Insert(self.Children, int(index), node...)
+func (self *BPNode) addChildrenByIndex(index int, node ...*BPNode) {
+	self.Children = slices.Insert(self.Children, index, node...)
 }
 
 func (self *BPNode) findChildrenIndex(node *BPNode) int {
@@ -75,10 +75,16 @@ func (self *BPNode) findChildrenIndex(node *BPNode) int {
 func (self *BPNode) removeChildren(node *BPNode) int {
 	index := self.Parent.findChildrenIndex(node)
 	if index < 0 {
-		return index
+		return -1
 	}
-	self.Children = slices.Delete(self.Children, index, index)
+	self.removeChildrenByIndex(index)
 	return index
+}
+
+func (self *BPNode) removeChildrenByIndex(index int) *BPNode {
+	child := self.Children[index]
+	self.Children = slices.Delete(self.Children, int(index), int(index))
+	return child
 }
 
 func (self *BPNode) getBorrowKeyLength(key meta.IndexEntry) uint {
@@ -122,7 +128,7 @@ func (self *BPNode) internalInsert(key meta.IndexEntry) {
 			break
 		}
 	}
-	self.addEntriesByIndex(uint(insertIndex), key)
+	self.addEntriesByIndex(insertIndex, key)
 }
 
 // 回收
@@ -161,8 +167,8 @@ func (self *BPNode) handlingParent(bpTree *BPTree, left *BPNode, right *BPNode) 
 		left.Parent = self.Parent
 		right.Parent = self.Parent
 		//将left和right叶子节点添加到父节点
-		self.Parent.addChildrenByIndex(uint(index), left)
-		self.Parent.addChildrenByIndex(uint(index+1), right)
+		self.Parent.addChildrenByIndex(index, left)
+		self.Parent.addChildrenByIndex(index+1, right)
 		//将当前节点中间的key添加到父节点
 		self.Parent.internalInsert(right.Entries[0].GetCompareEntry())
 		//父节点进行分裂
@@ -208,7 +214,7 @@ func (self *BPNode) internalRemove(key meta.IndexEntry) bool {
 	if index < 0 {
 		return false
 	}
-	self.removeEntriesByIndex(uint(index))
+	self.removeEntriesByIndex(index)
 	return true
 }
 
@@ -270,17 +276,139 @@ func (self *BPNode) mergeNextNode(next *BPNode) {
 	}
 }
 
-func (self *BPNode) prevLeafCanMerge(prev *BPNode) bool {
-	return true
+// 上一个内部节点是否可借用
+func (self *BPNode) prevInternalCanBorrow(prev *BPNode) bool {
+	return prev != nil && len(prev.Entries) >= 2 &&
+		self.internalCanBorrow(prev, prev.Entries[len(prev.Entries)-1])
 }
 
-func (self *BPNode) nextLeafCanMerge(next *BPNode) bool {
-	return true
+// 下一个内部节点是否可借用
+func (self *BPNode) nextInternalCanBorrow(next *BPNode) bool {
+	return next != nil && len(next.Entries) >= 2 &&
+		self.internalCanBorrow(next, next.Entries[0])
+}
+
+// 内部节点是否可借用
+func (self *BPNode) internalCanBorrow(node *BPNode, key meta.IndexEntry) bool {
+	if node == nil {
+		return false
+	}
+	if len(self.Entries) == 0 && len(node.Entries) >= 2 {
+		return true
+	}
+	borrowKeyLength := self.getBorrowKeyLength(key)
+	return node.Parent == self.Parent && len(node.Entries) >= 2 &&
+		node.Page.getContentSize()-borrowKeyLength > node.Page.getInitFreeSpace()/2 &&
+		borrowKeyLength <= self.Page.remainFreeSpace()
+}
+
+func (self *BPNode) prevCanMerge(prev *BPNode) bool {
+	if prev == nil {
+		return false
+	}
+	if prev.Parent == self.Parent {
+		adjustSize := uint(0)
+		if !prev.isLeaf {
+			selfIndex := self.Parent.findChildrenIndex(self)
+			downKey := self.Parent.Entries[selfIndex]
+			adjustSize = index.GetItemLength(downKey)
+		}
+		return prev.Page.getContentSize()+adjustSize <= self.Page.remainFreeSpace()
+	}
+	return false
+}
+
+func (self *BPNode) nextCanMerge(next *BPNode) bool {
+	if next == nil {
+		return false
+	}
+	if next.Parent == self.Parent {
+		adjustSize := uint(0)
+		if !next.isLeaf {
+			nextIndex := self.Parent.findChildrenIndex(next)
+			downKey := self.Parent.Entries[nextIndex]
+			adjustSize = index.GetItemLength(downKey)
+		}
+		return next.Page.getContentSize()+adjustSize <= self.Page.remainFreeSpace()
+	}
+	return false
 }
 
 // 内部节点合并
 func (self *BPNode) internalMerge(bpTree *BPTree) {
-
+	if len(self.Children) < 2 || self.Page.getContentSize() < self.Page.getInitFreeSpace()/2 {
+		if self.IsRoot && len(self.Children) < 2 {
+			//与子节点合并，子节点成为根节点
+			child := self.Children[0]
+			bpTree.Root = child
+			self.recycle()
+		} else {
+			selfIndex := self.Parent.findChildrenIndex(self)
+			prevIndex := selfIndex - 1
+			nextIndex := selfIndex + 1
+			var prev, next *BPNode
+			if prevIndex >= 0 {
+				prev = self.Children[prevIndex]
+			}
+			if nextIndex < len(self.Children) {
+				next = self.Children[nextIndex]
+			}
+			defer self.Parent.internalMerge(bpTree)
+			// 上一个内部节点是否可借用
+			if self.prevInternalCanBorrow(prev) {
+				// 下放key
+				downerKey := self.Parent.Entries[selfIndex]
+				self.addEntriesByIndex(0, downerKey)
+				// Prev key上提
+				prevLastKeyIndex := len(prev.Entries) - 1
+				self.Parent.setEntriesByIndex(selfIndex, prev.Entries[prevLastKeyIndex])
+				prev.removeEntriesByIndex(prevLastKeyIndex)
+				// 子节点也借用
+				borrowChild := prev.removeChildrenByIndex(len(prev.Children) - 1)
+				borrowChild.Parent = self
+				self.addChildrenByIndex(0, borrowChild)
+				return
+			}
+			// 下一个内部节点是否可借用
+			if self.nextInternalCanBorrow(next) {
+				// 下放key
+				downerKey := self.Parent.Entries[nextIndex]
+				self.addEntries(downerKey)
+				// Next key上提
+				self.Parent.setEntriesByIndex(nextIndex, next.Entries[0])
+				next.removeEntriesByIndex(0)
+				// 子节点也借用
+				borrowChild := next.removeChildrenByIndex(0)
+				borrowChild.Parent = self
+				self.addChildren(borrowChild)
+				return
+			}
+			if self.prevCanMerge(prev) {
+				self.mergePrevNode(prev)
+				self.Parent.removeEntriesByIndex(selfIndex)
+				self.Parent.removeChildren(prev)
+				prev.recycle()
+				return
+			}
+			if self.nextCanMerge(next) {
+				self.mergeNextNode(next)
+				self.Parent.removeEntriesByIndex(nextIndex)
+				self.Parent.removeChildren(next)
+				next.recycle()
+				return
+			}
+		}
+		return
+	}
+	if self.Page.getContentSize() > self.Page.getInitFreeSpace() {
+		/*
+			因为在更新的时候,由于key值大小不定,可能导致虽然删除了关键字,但是由于
+			更新了新的长的key,导致比删除之前的size还要大,所以就有可能导致分裂
+			即changeKeySize - deleteKeySize > 0的某些情况下会导致分裂
+		*/
+		self.internalSplit(bpTree)
+		return
+	}
 }
 
 // 获取
@@ -397,11 +525,11 @@ func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) bool {
 			//上一个叶子节点是否可借用
 			if self.prevLeafCanBorrow() {
 				//借用Prev最后一个key添加到当前Entries最前面
-				key := self.Prev.removeEntriesByIndex(uint(len(self.Prev.Entries) - 1))
+				key := self.Prev.removeEntriesByIndex(len(self.Prev.Entries) - 1)
 				self.addEntriesByIndex(0, key)
 				//更新key到父节点Entries
 				index := self.Parent.findChildrenIndex(self)
-				self.Parent.setEntriesByIndex(uint(index), key)
+				self.Parent.setEntriesByIndex(index, key)
 				return removeOk
 			}
 			//下一个叶子节点是否可借用
@@ -411,7 +539,7 @@ func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) bool {
 				self.addEntries(key)
 				//将Next的第一个key上提到父节点Entries
 				index := self.Parent.findChildrenIndex(self.Next)
-				self.Parent.setEntriesByIndex(uint(index), self.Next.Entries[0])
+				self.Parent.setEntriesByIndex(index, self.Next.Entries[0])
 				return removeOk
 			}
 			//Prev是否可合并
@@ -421,7 +549,7 @@ func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) bool {
 				//父节点删除Prev节点
 				prevIndex := self.Parent.removeChildren(self.Prev)
 				//父节点删除当前节点的key
-				self.Parent.removeEntriesByIndex(uint(prevIndex + 1))
+				self.Parent.removeEntriesByIndex(prevIndex + 1)
 				//更新节点指向
 				if self.Prev.Prev != nil {
 					self.Prev = self.Prev.Prev
@@ -441,7 +569,7 @@ func (self *BPNode) Remove(key meta.IndexEntry, bpTree *BPTree) bool {
 				//父节点删除Next节点
 				nextIndex := self.Parent.removeChildren(self.Next)
 				//父节点删除Next节点的key
-				self.Parent.removeEntriesByIndex(uint(nextIndex))
+				self.Parent.removeEntriesByIndex(nextIndex)
 				//更新节点指向
 				if self.Next.Next != nil {
 					self.Next = self.Next.Next
