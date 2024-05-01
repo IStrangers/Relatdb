@@ -357,8 +357,8 @@ func (self *BPNode) internalMerge(bpTree *BPTree) {
 			// 上一个内部节点是否可借用
 			if self.prevInternalCanBorrow(prev) {
 				// 下放key
-				downerKey := self.Parent.Entries[selfIndex]
-				self.addEntriesByIndex(0, downerKey)
+				downKey := self.Parent.Entries[selfIndex]
+				self.addEntriesByIndex(0, downKey)
 				// Prev key上提
 				prevLastKeyIndex := len(prev.Entries) - 1
 				self.Parent.setEntriesByIndex(selfIndex, prev.Entries[prevLastKeyIndex])
@@ -372,8 +372,8 @@ func (self *BPNode) internalMerge(bpTree *BPTree) {
 			// 下一个内部节点是否可借用
 			if self.nextInternalCanBorrow(next) {
 				// 下放key
-				downerKey := self.Parent.Entries[nextIndex]
-				self.addEntries(downerKey)
+				downKey := self.Parent.Entries[nextIndex]
+				self.addEntries(downKey)
 				// Next key上提
 				self.Parent.setEntriesByIndex(nextIndex, next.Entries[0])
 				next.removeEntriesByIndex(0)
