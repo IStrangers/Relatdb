@@ -1,6 +1,7 @@
 package server
 
 import (
+	"Relatdb/store"
 	"fmt"
 	"net"
 )
@@ -17,20 +18,23 @@ type Server struct {
 
 	autoConnId uint64
 	connMap    map[uint64]*Connection
+	store      *store.Store
 }
 
-func CreateServer(options *Options) *Server {
+func CreateServer(options *Options, store *store.Store) *Server {
 	server := &Server{
 		version: SERVER_VERSION,
 		options: options,
 
 		autoConnId: 0,
 		connMap:    map[uint64]*Connection{},
+		store:      store,
 	}
 	return server
 }
 
 func (self *Server) Start() {
+	self.store.Init()
 	bindAddress := fmt.Sprintf("%s:%d", self.options.BindIp, self.options.BindPort)
 	ln, err := net.Listen("tcp", bindAddress)
 	if err != nil {

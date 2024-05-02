@@ -118,9 +118,9 @@ func CreateClusterIndexEntry(values []Value, desc *IndexDesc) *ClusterIndexEntry
 
 func (self *ClusterIndexEntry) GetCompareEntry() IndexEntry {
 	if self.CompareEntry == nil {
-		primaryAttr := self.Desc.PrimaryAttr
+		primaryAttr := self.Desc.PrimaryFiled
 		rowId := self.Values[primaryAttr.Index]
-		desc := CreateIndexDesc([]*Attribute{primaryAttr})
+		desc := CreateIndexDesc([]*Field{primaryAttr})
 		self.IndexEntry = CreateNotLeafIndexEntry([]Value{rowId}, desc)
 	}
 	return self.IndexEntry

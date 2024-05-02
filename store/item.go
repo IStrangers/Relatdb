@@ -1,5 +1,11 @@
 package store
 
+import "Relatdb/meta"
+
+func GetItemLength(indexEntry meta.IndexEntry) uint {
+	return ITEM_POINTER_LENGTH + indexEntry.GetLength()
+}
+
 const ITEM_POINTER_LENGTH = 8
 
 type ItemPointer struct {

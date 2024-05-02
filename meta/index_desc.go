@@ -1,37 +1,20 @@
 package meta
 
-type Attribute struct {
-	Index        uint
-	Name         string
-	Type         byte
-	Comment      string
-	IsPrimaryKey bool
-}
-
-func CreateAttribute(index uint, name string, t byte, comment string) *Attribute {
-	return &Attribute{
-		Index:   index,
-		Name:    name,
-		Type:    t,
-		Comment: comment,
-	}
-}
-
 type IndexDesc struct {
-	Attrs       []*Attribute
-	PrimaryAttr *Attribute
-	AttrMap     map[string]*Attribute
+	Fields       []*Field
+	PrimaryFiled *Field
+	FieldMap     map[string]*Field
 }
 
-func CreateIndexDesc(attrs []*Attribute) *IndexDesc {
+func CreateIndexDesc(fields []*Field) *IndexDesc {
 	desc := &IndexDesc{
-		Attrs: make([]*Attribute, 0),
+		Fields: make([]*Field, 0),
 	}
-	desc.AttrMap = make(map[string]*Attribute, len(attrs))
-	for _, attr := range attrs {
-		desc.AttrMap[attr.Name] = attr
-		if attr.IsPrimaryKey {
-			desc.PrimaryAttr = attr
+	desc.FieldMap = make(map[string]*Field, len(fields))
+	for _, field := range fields {
+		desc.FieldMap[field.Name] = field
+		if field.IsPrimaryKey {
+			desc.PrimaryFiled = field
 		}
 	}
 	return desc
