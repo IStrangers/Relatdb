@@ -4,6 +4,11 @@ import (
 	"Relatdb/meta"
 	"Relatdb/utils"
 	"os"
+	"strings"
+)
+
+const (
+	META_SUFFIX = ".meta"
 )
 
 type Options struct {
@@ -11,29 +16,43 @@ type Options struct {
 }
 
 type Store struct {
-	metaPath string
-	dataPath string
+	path     string
 	tableMap map[string]*meta.Table
 }
 
 func CreateStore(options *Options) *Store {
 	return &Store{
-		metaPath: utils.ConcatFilePaths(options.Path, "meta"),
-		dataPath: utils.ConcatFilePaths(options.Path, "data"),
+		path: utils.ConcatFilePaths(options.Path),
 	}
 }
 
 func (self *Store) Init() {
-	metaDir, err := os.ReadDir(self.metaPath)
+	metaDir, err := os.ReadDir(self.path)
 	if err != nil {
 		panic(err)
 	}
 	for _, entry := range metaDir {
-		table := self.ReadTable(utils.ConcatFilePaths(self.metaPath, entry.Name()))
+		fileName := entry.Name()
+		if !strings.HasSuffix(fileName, META_SUFFIX) {
+			continue
+		}
+		table, err := self.ReadTable(utils.ConcatFilePaths(self.path, fileName))
+		if err != nil {
+			panic(err)
+		}
 		self.tableMap[table.Name] = table
 	}
 }
 
-func (self *Store) ReadTable(path string) *meta.Table {
-	return &meta.Table{}
+func (self *Store) ReadTable(path string) (*meta.Table, error) {
+	pageStore, err := CreatePageStore(path)
+	if err != nil {
+		return nil, err
+	}
+	page := pageStore.ReadPage(0)
+	items := page.ReadItems()
+	for _, item := range items {
+		println(item)
+	}
+	return &meta.Table{}, nil
 }

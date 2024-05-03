@@ -88,7 +88,7 @@ func (self *BPNode) removeChildrenByIndex(index int) *BPNode {
 }
 
 func (self *BPNode) getBorrowKeyLength(key meta.IndexEntry) uint {
-	itemLength := index.GetItemLength(key)
+	itemLength := store.GetItemLength(key)
 	if !self.isLeaf {
 		itemLength += store.ITEM_INT_LENGTH
 	}
@@ -106,7 +106,7 @@ func (self *BPNode) internalCheckExist(key meta.IndexEntry) bool {
 
 // 叶子节点是否需要分裂
 func (self *BPNode) isLeafSplit(key meta.IndexEntry) bool {
-	return self.Page.remainFreeSpace() < index.GetItemLength(key)
+	return self.Page.remainFreeSpace() < store.GetItemLength(key)
 }
 
 // 内部节点是否需要分裂
@@ -220,7 +220,7 @@ func (self *BPNode) internalRemove(key meta.IndexEntry) bool {
 
 // 是否是平衡的叶子节点
 func (self *BPNode) isBalancedLeaf(key meta.IndexEntry) bool {
-	return self.Page.getContentSize()-index.GetItemLength(key) > self.Page.getInitFreeSpace()/2
+	return self.Page.getContentSize()-store.GetItemLength(key) > self.Page.getInitFreeSpace()/2
 }
 
 // 上一个叶子节点是否可借用
@@ -311,7 +311,7 @@ func (self *BPNode) prevCanMerge(prev *BPNode) bool {
 		if !prev.isLeaf {
 			selfIndex := self.Parent.findChildrenIndex(self)
 			downKey := self.Parent.Entries[selfIndex]
-			adjustSize = index.GetItemLength(downKey)
+			adjustSize = store.GetItemLength(downKey)
 		}
 		return prev.Page.getContentSize()+adjustSize <= self.Page.remainFreeSpace()
 	}
@@ -327,7 +327,7 @@ func (self *BPNode) nextCanMerge(next *BPNode) bool {
 		if !next.isLeaf {
 			nextIndex := self.Parent.findChildrenIndex(next)
 			downKey := self.Parent.Entries[nextIndex]
-			adjustSize = index.GetItemLength(downKey)
+			adjustSize = store.GetItemLength(downKey)
 		}
 		return next.Page.getContentSize()+adjustSize <= self.Page.remainFreeSpace()
 	}
