@@ -23,7 +23,6 @@ type Connection struct {
 	clientCapabilities uint32
 	userName           string
 	database           string
-	context            *Context
 }
 
 func NewConnection(server *Server, conn net.Conn) *Connection {
@@ -124,7 +123,6 @@ func (self *Connection) authentication() bool {
 	}
 	self.clientCapabilities = authPacket.ClientFlags
 	self.userName = authPacket.UserName
-	self.context = NewContext()
 	self.writeAuthOK()
 	return true
 }
@@ -245,13 +243,14 @@ func (self *Connection) handlingQuery(querySql string) {
 	if stmtLength > 1 && self.clientCapabilities&CLIENT_MULTI_STATEMENTS == 0 {
 		//return
 	}
+	ctx := NewContext(self)
 	for i, stmt := range stmts {
-		self.handlingStmt(stmt, stmtLength-1 == i)
+		self.handlingStmt(ctx, stmt, stmtLength-1 == i)
 	}
 }
 
-func (self *Connection) handlingStmt(stmt ast.Statement, isLastStmt bool) {
-	self.context.executeStmt(stmt)
+func (self *Connection) handlingStmt(ctx *Context, stmt ast.Statement, isLastStmt bool) {
+	ctx.executeStmt(stmt)
 }
 
 func (self *Connection) handlingStmtPrepare() {

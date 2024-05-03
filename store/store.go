@@ -57,3 +57,8 @@ func (self *Store) ReadTable(path string) (*meta.Table, error) {
 	}
 	return &meta.Table{}, nil
 }
+
+func (self *Store) CreateTable(table *meta.Table) error {
+	self.tableMap[table.Name] = table
+	return nil
+}

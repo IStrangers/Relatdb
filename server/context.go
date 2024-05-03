@@ -1,19 +1,25 @@
 package server
 
-import "Relatdb/parser/ast"
+import (
+	"Relatdb/executor"
+	"Relatdb/parser/ast"
+)
 
 type Context struct {
+	conn    *Connection
 	session *Session
 }
 
-func NewContext() *Context {
+func NewContext(conn *Connection) *Context {
 	return &Context{
+		conn:    conn,
 		session: NewSession(),
 	}
 }
 
 func (self *Context) executeStmt(stmt ast.Statement) {
-	recordSet, err := self.session.executeStmt(stmt)
+	executor := executor.NewExecutor(stmt)
+	recordSet, err := executor.Execute()
 	if err != nil {
 		return
 	}
