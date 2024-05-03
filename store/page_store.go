@@ -9,7 +9,7 @@ type PageStore struct {
 	file *os.File
 }
 
-func CreatePageStore(path string) (*PageStore, error) {
+func NewPageStore(path string) (*PageStore, error) {
 	file, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
@@ -25,6 +25,6 @@ func (self *PageStore) ReadPage(pageIndex int) *Page {
 	buf := make([]byte, DEFAULT_PAGE_SIZE)
 	self.file.Seek(readPos, 0)
 	self.file.Read(buf)
-	buffer := CreateBuffer(buf)
-	return CreatePage(buffer)
+	buffer := NewBuffer(buf)
+	return NewPage(buffer)
 }

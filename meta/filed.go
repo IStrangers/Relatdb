@@ -8,7 +8,7 @@ type Field struct {
 	IsPrimaryKey bool
 }
 
-func CreateField(index uint, name string, t byte, comment string) *Field {
+func NewField(index uint, name string, t byte, comment string) *Field {
 	return &Field{
 		Index:   index,
 		Name:    name,

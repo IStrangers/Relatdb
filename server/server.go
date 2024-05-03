@@ -21,7 +21,7 @@ type Server struct {
 	store      *store.Store
 }
 
-func CreateServer(options *Options, store *store.Store) *Server {
+func NewServer(options *Options, store *store.Store) *Server {
 	server := &Server{
 		version: SERVER_VERSION,
 		options: options,

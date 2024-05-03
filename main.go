@@ -9,10 +9,10 @@ import (
 
 func main() {
 	wd, _ := os.Getwd()
-	store := store.CreateStore(&store.Options{
+	store := store.NewStore(&store.Options{
 		Path: utils.ConcatFilePaths(wd, "data"),
 	})
-	server := server.CreateServer(&server.Options{
+	server := server.NewServer(&server.Options{
 		BindIp:   "localhost",
 		BindPort: 3306,
 	}, store)

@@ -22,7 +22,7 @@ type PageHeader struct {
 	HeaderLength int
 }
 
-func CreatePageHeader(size int) *PageHeader {
+func NewPageHeader(size int) *PageHeader {
 	magicWordLength := len([]byte(MAGIC_WORD)) + 1
 	lowerOffset := magicWordLength + 4 + 4 + 4 + 4
 	upperOffset := size - DEFAULT_SPECIAL_POINT_LENGTH
@@ -41,8 +41,8 @@ type Page struct {
 	Dirty  bool
 }
 
-func CreatePage(buffer *Buffer) *Page {
-	pageHeader := CreatePageHeader(buffer.Length)
+func NewPage(buffer *Buffer) *Page {
+	pageHeader := NewPageHeader(buffer.Length)
 	magicWord := buffer.ReadStringWithZero()
 	if magicWord != MAGIC_WORD {
 	}
@@ -68,12 +68,12 @@ func (self *Page) WritePageHeader() {
 }
 
 func (self *Page) readItemPointer() *ItemPointer {
-	return CreateItemPointer(self.Buffer.ReadInt(), self.Buffer.ReadInt())
+	return NewItemPointer(self.Buffer.ReadInt(), self.Buffer.ReadInt())
 }
 
 func (self *Page) readItemData(itemPointer *ItemPointer) *ItemData {
 	data := self.Buffer.ReadBytesByOffset(itemPointer.Offset, itemPointer.TupleLength)
-	return CreateItemData(data, len(data), itemPointer.Offset)
+	return NewItemData(data, len(data), itemPointer.Offset)
 }
 
 func (self *Page) readItem() *Item {
@@ -82,7 +82,7 @@ func (self *Page) readItem() *Item {
 		return nil
 	}
 	itemData := self.readItemData(itemPointer)
-	return CreateItem(itemPointer, itemData)
+	return NewItem(itemPointer, itemData)
 }
 
 func (self *Page) ReadItems() (items []*Item) {

@@ -20,7 +20,7 @@ type Store struct {
 	tableMap map[string]*meta.Table
 }
 
-func CreateStore(options *Options) *Store {
+func NewStore(options *Options) *Store {
 	return &Store{
 		path: utils.ConcatFilePaths(options.Path),
 	}
@@ -45,14 +45,15 @@ func (self *Store) Init() {
 }
 
 func (self *Store) ReadTable(path string) (*meta.Table, error) {
-	pageStore, err := CreatePageStore(path)
+	pageStore, err := NewPageStore(path)
 	if err != nil {
 		return nil, err
 	}
 	page := pageStore.ReadPage(0)
 	items := page.ReadItems()
+	var entries []meta.IndexEntry
 	for _, item := range items {
-		println(item)
+		entries = append(entries, ItemToIndexEntry(item))
 	}
 	return &meta.Table{}, nil
 }

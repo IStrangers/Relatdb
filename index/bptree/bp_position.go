@@ -8,7 +8,7 @@ type BPPosition struct {
 	Node        *BPNode
 }
 
-func CreateBPPosition(searchEntry *meta.IndexEntry, position uint, node *BPNode) *BPPosition {
+func NewBPPosition(searchEntry *meta.IndexEntry, position uint, node *BPNode) *BPPosition {
 	return &BPPosition{
 		SearchEntry: searchEntry,
 		Position:    position,

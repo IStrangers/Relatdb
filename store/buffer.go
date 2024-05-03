@@ -7,7 +7,7 @@ type Buffer struct {
 	Length     int
 }
 
-func CreateBuffer(data []byte) *Buffer {
+func NewBuffer(data []byte) *Buffer {
 	return &Buffer{
 		Data:       data,
 		ReadIndex:  0,
@@ -16,8 +16,8 @@ func CreateBuffer(data []byte) *Buffer {
 	}
 }
 
-func CreateBufferBySize(size int) *Buffer {
-	return CreateBuffer(make([]byte, size))
+func NewBufferBySize(size int) *Buffer {
+	return NewBuffer(make([]byte, size))
 }
 
 func (self *Buffer) WriteByte(b byte) {

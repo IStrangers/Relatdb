@@ -6,7 +6,7 @@ type IndexDesc struct {
 	FieldMap     map[string]*Field
 }
 
-func CreateIndexDesc(fields []*Field) *IndexDesc {
+func NewIndexDesc(fields []*Field) *IndexDesc {
 	desc := &IndexDesc{
 		Fields: make([]*Field, 0),
 	}

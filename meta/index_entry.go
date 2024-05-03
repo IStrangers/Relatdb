@@ -17,7 +17,7 @@ type BaseIndexEntry struct {
 	IsAllNull  bool
 }
 
-func CreateIndexEntry(values []Value, desc *IndexDesc) *BaseIndexEntry {
+func NewIndexEntry(values []Value, desc *IndexDesc) *BaseIndexEntry {
 	entry := &BaseIndexEntry{}
 	entry.Values = values
 	entry.Desc = desc
@@ -73,7 +73,7 @@ func (self *BaseIndexEntry) GetLength() uint {
 
 func (self *BaseIndexEntry) GetCompareEntry() IndexEntry {
 	if self.CompareEntry == nil {
-		self.IndexEntry = CreateNotLeafIndexEntry(self.Values[:], self.Desc)
+		self.IndexEntry = NewNotLeafIndexEntry(self.Values[:], self.Desc)
 	}
 	return self.IndexEntry
 }
@@ -94,7 +94,7 @@ type NotLeafIndexEntry struct {
 	BaseIndexEntry
 }
 
-func CreateNotLeafIndexEntry(values []Value, desc *IndexDesc) *NotLeafIndexEntry {
+func NewNotLeafIndexEntry(values []Value, desc *IndexDesc) *NotLeafIndexEntry {
 	entry := &NotLeafIndexEntry{}
 	entry.Values = values
 	entry.Desc = desc
@@ -109,7 +109,7 @@ type ClusterIndexEntry struct {
 	BaseIndexEntry
 }
 
-func CreateClusterIndexEntry(values []Value, desc *IndexDesc) *ClusterIndexEntry {
+func NewClusterIndexEntry(values []Value, desc *IndexDesc) *ClusterIndexEntry {
 	entry := &ClusterIndexEntry{}
 	entry.Values = values
 	entry.Desc = desc
@@ -120,8 +120,8 @@ func (self *ClusterIndexEntry) GetCompareEntry() IndexEntry {
 	if self.CompareEntry == nil {
 		primaryAttr := self.Desc.PrimaryFiled
 		rowId := self.Values[primaryAttr.Index]
-		desc := CreateIndexDesc([]*Field{primaryAttr})
-		self.IndexEntry = CreateNotLeafIndexEntry([]Value{rowId}, desc)
+		desc := NewIndexDesc([]*Field{primaryAttr})
+		self.IndexEntry = NewNotLeafIndexEntry([]Value{rowId}, desc)
 	}
 	return self.IndexEntry
 }

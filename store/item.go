@@ -1,6 +1,9 @@
 package store
 
-import "Relatdb/meta"
+import (
+	"Relatdb/meta"
+	"Relatdb/utils"
+)
 
 func GetItemLength(indexEntry meta.IndexEntry) uint {
 	return ITEM_POINTER_LENGTH + indexEntry.GetLength()
@@ -13,7 +16,7 @@ type ItemPointer struct {
 	TupleLength int
 }
 
-func CreateItemPointer(offset int, tupleLength int) *ItemPointer {
+func NewItemPointer(offset int, tupleLength int) *ItemPointer {
 	return &ItemPointer{
 		Offset:      offset,
 		TupleLength: tupleLength,
@@ -26,7 +29,7 @@ type ItemData struct {
 	Offset int
 }
 
-func CreateItemData(data []byte, length int, offset int) *ItemData {
+func NewItemData(data []byte, length int, offset int) *ItemData {
 	return &ItemData{
 		Data:   data,
 		Length: length,
@@ -41,9 +44,20 @@ type Item struct {
 	Data    *ItemData
 }
 
-func CreateItem(pointer *ItemPointer, data *ItemData) *Item {
+func NewItem(pointer *ItemPointer, data *ItemData) *Item {
 	return &Item{
 		Pointer: pointer,
 		Data:    data,
 	}
+}
+
+func ItemToIndexEntry(item *Item) meta.IndexEntry {
+	bytesReader := utils.NewBytesReader(item.Data.Data)
+	var values []meta.Value
+	for bytesReader.Remaining() > 0 {
+		fieldType := bytesReader.ReadByte()
+		println(fieldType)
+		break
+	}
+	return meta.NewIndexEntry(values, nil)
 }

@@ -159,3 +159,7 @@ func (self *BytesReader) ReadRemainingBytes() []byte {
 	}()
 	return self.Data[self.Offset:]
 }
+
+func (self *BytesReader) Remaining() uint64 {
+	return self.Length - self.Offset
+}

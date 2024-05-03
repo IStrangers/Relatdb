@@ -20,7 +20,7 @@ type BPNode struct {
 	Page      *BPPage           //页
 }
 
-func CreateBPNode(ownerTree *BPTree, isRoot bool, isLeaf bool) *BPNode {
+func NewBPNode(ownerTree *BPTree, isRoot bool, isLeaf bool) *BPNode {
 	bpNode := &BPNode{
 		OwnerTree: ownerTree,
 		IsRoot:    isRoot,
@@ -148,7 +148,7 @@ func (self *BPNode) handlingParent(bpTree *BPTree, left *BPNode, right *BPNode) 
 	if self.IsRoot {
 		self.IsRoot = false
 		//创建新的根节点
-		root := CreateBPNode(self.OwnerTree, true, false)
+		root := NewBPNode(self.OwnerTree, true, false)
 		//更新节点指向
 		bpTree.Root = root
 		left.Parent = root
@@ -183,8 +183,8 @@ func (self *BPNode) internalSplit(bpTree *BPTree) {
 	if !self.isInternalSplit() {
 		return
 	}
-	left := CreateBPNode(self.OwnerTree, false, false)
-	right := CreateBPNode(self.OwnerTree, false, false)
+	left := NewBPNode(self.OwnerTree, false, false)
+	right := NewBPNode(self.OwnerTree, false, false)
 
 	leftSize := len(self.Entries) / 2
 	rightSize := len(self.Entries) - leftSize
@@ -421,12 +421,12 @@ func (self *BPNode) Get(key meta.IndexEntry, compareType index.CompareType) *BPP
 				if key.CompareEntry(entry) != 0 {
 					continue
 				}
-				return CreateBPPosition(nil, uint(i), self)
+				return NewBPPosition(nil, uint(i), self)
 			}
 		} else if compareType == index.COMPARE_LOW {
-			return CreateBPPosition(nil, 0, self)
+			return NewBPPosition(nil, 0, self)
 		} else {
-			return CreateBPPosition(nil, uint(len(self.Entries)-1), self)
+			return NewBPPosition(nil, uint(len(self.Entries)-1), self)
 		}
 	}
 	//非叶子节点
@@ -460,8 +460,8 @@ func (self *BPNode) Insert(key meta.IndexEntry, bpTree *BPTree, isUnique bool) e
 			return nil
 		}
 		//叶子节点需要分裂，并将当前叶子节点分裂成两个新的叶子节点
-		left := CreateBPNode(self.OwnerTree, false, true)  //左叶子节点
-		right := CreateBPNode(self.OwnerTree, false, true) //右叶子节点
+		left := NewBPNode(self.OwnerTree, false, true)  //左叶子节点
+		right := NewBPNode(self.OwnerTree, false, true) //右叶子节点
 		//将Prev和Next叶子节点指向新的left和right
 		if self.Prev != nil {
 			self.Prev.Next = left
