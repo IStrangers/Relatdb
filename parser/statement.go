@@ -140,7 +140,7 @@ func (self *Parser) parseColumnDefinition() *ast.ColumnDefinition {
 	}
 
 	if self.expectEqualsToken(token.PRIMARY) && self.expectEqualsToken(token.KEY) {
-		columnDefinition.Flag |= common.PRI_KEY_FLAG
+		columnDefinition.Flag |= common.PRIMARY_KEY_FLAG
 	}
 	if self.expectEqualsToken(token.UNIQUE) {
 		columnDefinition.Flag |= common.UNIQUE_KEY_FLAG
@@ -164,7 +164,7 @@ func (self *Parser) parseColumnDefinition() *ast.ColumnDefinition {
 		columnDefinition.DefaultValue = self.parseExpression()
 	}
 	if self.expectEqualsToken(token.COLUMN_COMMENT) {
-		columnDefinition.Comment = self.parseStringLiteral()
+		columnDefinition.Comment = self.parseExpression()
 	}
 	return columnDefinition
 }

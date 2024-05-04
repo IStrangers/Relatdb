@@ -9,22 +9,23 @@ type PageStore struct {
 	file *os.File
 }
 
-func NewPageStore(path string) (*PageStore, error) {
-	file, err := os.OpenFile(path, os.O_RDWR, 0)
-	if err != nil {
-		return nil, err
-	}
+func NewPageStore(path string) *PageStore {
+	file, _ := os.OpenFile(path, os.O_RDWR, 0)
 	return &PageStore{
 		path: path,
 		file: file,
-	}, nil
+	}
 }
 
-func (self *PageStore) ReadPage(pageIndex int) *Page {
+func (self *PageStore) readPage(pageIndex int) *Page {
 	readPos := int64(pageIndex * DEFAULT_PAGE_SIZE)
 	buf := make([]byte, DEFAULT_PAGE_SIZE)
 	self.file.Seek(readPos, 0)
 	self.file.Read(buf)
 	buffer := NewBuffer(buf)
-	return NewPage(buffer)
+	return NewPageByBuffer(buffer)
+}
+
+func (self *PageStore) writePage(page *Page) {
+
 }

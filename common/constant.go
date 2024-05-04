@@ -38,7 +38,7 @@ const (
  */
 const (
 	NOT_NULL_FLAG       = 0x0001
-	PRI_KEY_FLAG        = 0x0002
+	PRIMARY_KEY_FLAG    = 0x0002
 	UNIQUE_KEY_FLAG     = 0x0004
 	MULTIPLE_KEY_FLAG   = 0x0008
 	BLOB_FLAG           = 0x0010

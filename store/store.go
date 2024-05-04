@@ -3,12 +3,14 @@ package store
 import (
 	"Relatdb/meta"
 	"Relatdb/utils"
+	"errors"
 	"os"
 	"strings"
 )
 
 const (
 	META_SUFFIX = ".meta"
+	DATA_SUFFIX = ".data"
 )
 
 type Options struct {
@@ -36,7 +38,7 @@ func (self *Store) Init() {
 		if !strings.HasSuffix(fileName, META_SUFFIX) {
 			continue
 		}
-		table, err := self.ReadTable(utils.ConcatFilePaths(self.path, fileName))
+		table, err := self.readTable(utils.ConcatFilePaths(self.path, fileName))
 		if err != nil {
 			panic(err)
 		}
@@ -44,13 +46,10 @@ func (self *Store) Init() {
 	}
 }
 
-func (self *Store) ReadTable(path string) (*meta.Table, error) {
-	pageStore, err := NewPageStore(path)
-	if err != nil {
-		return nil, err
-	}
-	page := pageStore.ReadPage(0)
-	items := page.ReadItems()
+func (self *Store) readTable(path string) (*meta.Table, error) {
+	pageStore := NewPageStore(path)
+	page := pageStore.readPage(0)
+	items := page.readItems()
 	var entries []meta.IndexEntry
 	for _, item := range items {
 		entries = append(entries, ItemToIndexEntry(item))
@@ -58,7 +57,27 @@ func (self *Store) ReadTable(path string) (*meta.Table, error) {
 	return &meta.Table{}, nil
 }
 
+func (self *Store) writeTable(table *meta.Table) error {
+	pageStore := NewPageStore(table.MetaPath)
+	itemName := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{}, nil))
+	itemSize := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{}, nil))
+	page := NewPage()
+	page.writeItem(itemName)
+	page.writeItem(itemSize)
+	pageStore.writePage(page)
+	return nil
+}
+
 func (self *Store) CreateTable(table *meta.Table) error {
+	if self.tableMap[table.Name] != nil {
+		return errors.New("table already exists: " + table.Name)
+	}
+	table.MetaPath = utils.ConcatFilePaths(self.path, table.Name, META_SUFFIX)
+	table.DataPath = utils.ConcatFilePaths(self.path, table.Name, DATA_SUFFIX)
+	err := self.writeTable(table)
+	if err != nil {
+		return err
+	}
 	self.tableMap[table.Name] = table
 	return nil
 }

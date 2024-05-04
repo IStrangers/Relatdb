@@ -1,5 +1,7 @@
 package meta
 
+import "Relatdb/common"
+
 type IndexDesc struct {
 	Fields       []*Field
 	PrimaryFiled *Field
@@ -13,7 +15,7 @@ func NewIndexDesc(fields []*Field) *IndexDesc {
 	desc.FieldMap = make(map[string]*Field, len(fields))
 	for _, field := range fields {
 		desc.FieldMap[field.Name] = field
-		if field.IsPrimaryKey {
+		if field.Flag&common.PRIMARY_KEY_FLAG != 0 {
 			desc.PrimaryFiled = field
 		}
 	}

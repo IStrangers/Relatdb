@@ -41,8 +41,13 @@ type Page struct {
 	Dirty  bool
 }
 
-func NewPage(buffer *Buffer) *Page {
-	pageHeader := NewPageHeader(buffer.Length)
+func NewPage() *Page {
+	return NewPageBySize(DEFAULT_PAGE_SIZE)
+}
+
+func NewPageByBuffer(buffer *Buffer) *Page {
+	page := NewPageBySize(buffer.Length)
+	pageHeader := page.Header
 	magicWord := buffer.ReadStringWithZero()
 	if magicWord != MAGIC_WORD {
 	}
@@ -50,16 +55,23 @@ func NewPage(buffer *Buffer) *Page {
 	pageHeader.UpperOffset = buffer.ReadInt()
 	pageHeader.Special = buffer.ReadInt()
 	pageHeader.TupleCount = buffer.ReadInt()
-	page := &Page{
-		Header: pageHeader,
-		Buffer: buffer,
-		Length: buffer.Length,
-		Dirty:  false,
-	}
+	page.Buffer = buffer
 	return page
 }
 
-func (self *Page) WritePageHeader() {
+func NewPageBySize(size int) *Page {
+	pageHeader := NewPageHeader(size)
+	page := &Page{
+		Header: pageHeader,
+		Buffer: NewBufferBySize(size),
+		Length: size,
+		Dirty:  false,
+	}
+	page.writePageHeader()
+	return page
+}
+
+func (self *Page) writePageHeader() {
 	self.Buffer.WriteStringWithZero(MAGIC_WORD)
 	self.Buffer.WriteInt(self.Header.LowerOffset)
 	self.Buffer.WriteInt(self.Header.UpperOffset)
@@ -85,7 +97,7 @@ func (self *Page) readItem() *Item {
 	return NewItem(itemPointer, itemData)
 }
 
-func (self *Page) ReadItems() (items []*Item) {
+func (self *Page) readItems() (items []*Item) {
 	for _ = range self.Header.TupleCount {
 		item := self.readItem()
 		if item == nil {
@@ -94,4 +106,8 @@ func (self *Page) ReadItems() (items []*Item) {
 		items = append(items, item)
 	}
 	return
+}
+
+func (self *Page) writeItem(item *Item) {
+
 }

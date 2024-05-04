@@ -3,11 +3,16 @@ package server
 import (
 	"Relatdb/executor"
 	"Relatdb/parser/ast"
+	"Relatdb/store"
 )
 
 type Context struct {
 	conn    *Connection
 	session *Session
+}
+
+func (self *Context) GetStore() *store.Store {
+	return self.conn.server.store
 }
 
 func NewContext(conn *Connection) *Context {
@@ -18,7 +23,7 @@ func NewContext(conn *Connection) *Context {
 }
 
 func (self *Context) executeStmt(stmt ast.Statement) {
-	executor := executor.NewExecutor(stmt)
+	executor := executor.NewExecutor(self, stmt)
 	recordSet, err := executor.Execute()
 	if err != nil {
 		return

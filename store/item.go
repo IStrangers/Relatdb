@@ -61,3 +61,8 @@ func ItemToIndexEntry(item *Item) meta.IndexEntry {
 	}
 	return meta.NewIndexEntry(values, nil)
 }
+
+func IndexEntryToItem(entry meta.IndexEntry) *Item {
+
+	return NewItem(nil, nil)
+}
