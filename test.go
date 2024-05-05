@@ -11,7 +11,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	rows, err := db.Query(`select * from USER`)
+	rows, err := db.Query(`
+		create table myBase.User(
+		    id INT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+    		email VARCHAR(50) UNIQUE COMMENT '邮箱',
+    		age INT UNSIGNED DEFAULT 1 COMMENT '年龄',
+    		noId INT(6) ZEROFILL
+		);
+	`)
 	if err != nil {
 		return
 	}

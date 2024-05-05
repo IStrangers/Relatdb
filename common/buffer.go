@@ -1,10 +1,10 @@
-package store
+package common
 
 type Buffer struct {
 	Data       []byte
 	ReadIndex  int
 	WriteIndex int
-	Length     int
+	Length     uint
 }
 
 func NewBuffer(data []byte) *Buffer {
@@ -12,11 +12,11 @@ func NewBuffer(data []byte) *Buffer {
 		Data:       data,
 		ReadIndex:  0,
 		WriteIndex: 0,
-		Length:     len(data),
+		Length:     uint(len(data)),
 	}
 }
 
-func NewBufferBySize(size int) *Buffer {
+func NewBufferBySize(size uint) *Buffer {
 	return NewBuffer(make([]byte, size))
 }
 

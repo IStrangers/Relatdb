@@ -1,5 +1,10 @@
 package store
 
+import (
+	"Relatdb/common"
+	"errors"
+)
+
 const (
 	DEFAULT_PAGE_SIZE            = 4096
 	DEFAULT_SPECIAL_POINT_LENGTH = 64
@@ -22,10 +27,10 @@ type PageHeader struct {
 	HeaderLength int
 }
 
-func NewPageHeader(size int) *PageHeader {
+func NewPageHeader(size uint) *PageHeader {
 	magicWordLength := len([]byte(MAGIC_WORD)) + 1
 	lowerOffset := magicWordLength + 4 + 4 + 4 + 4
-	upperOffset := size - DEFAULT_SPECIAL_POINT_LENGTH
+	upperOffset := int(size) - DEFAULT_SPECIAL_POINT_LENGTH
 	return &PageHeader{
 		LowerOffset:  lowerOffset,
 		UpperOffset:  upperOffset,
@@ -36,8 +41,8 @@ func NewPageHeader(size int) *PageHeader {
 
 type Page struct {
 	Header *PageHeader
-	Buffer *Buffer
-	Length int
+	Buffer *common.Buffer
+	Length uint
 	Dirty  bool
 }
 
@@ -45,7 +50,7 @@ func NewPage() *Page {
 	return NewPageBySize(DEFAULT_PAGE_SIZE)
 }
 
-func NewPageByBuffer(buffer *Buffer) *Page {
+func NewPageByBuffer(buffer *common.Buffer) *Page {
 	page := NewPageBySize(buffer.Length)
 	pageHeader := page.Header
 	magicWord := buffer.ReadStringWithZero()
@@ -59,16 +64,20 @@ func NewPageByBuffer(buffer *Buffer) *Page {
 	return page
 }
 
-func NewPageBySize(size int) *Page {
+func NewPageBySize(size uint) *Page {
 	pageHeader := NewPageHeader(size)
 	page := &Page{
 		Header: pageHeader,
-		Buffer: NewBufferBySize(size),
+		Buffer: common.NewBufferBySize(size),
 		Length: size,
 		Dirty:  false,
 	}
 	page.writePageHeader()
 	return page
+}
+
+func (self *Page) remainFreeSpace() int {
+	return self.Header.UpperOffset - self.Header.LowerOffset
 }
 
 func (self *Page) writePageHeader() {
@@ -85,7 +94,7 @@ func (self *Page) readItemPointer() *ItemPointer {
 
 func (self *Page) readItemData(itemPointer *ItemPointer) *ItemData {
 	data := self.Buffer.ReadBytesByOffset(itemPointer.Offset, itemPointer.TupleLength)
-	return NewItemData(data, len(data), itemPointer.Offset)
+	return NewItemData(data, len(data))
 }
 
 func (self *Page) readItem() *Item {
@@ -108,6 +117,15 @@ func (self *Page) readItems() (items []*Item) {
 	return
 }
 
-func (self *Page) writeItem(item *Item) {
-
+func (self *Page) writeItem(items ...*Item) error {
+	for _, item := range items {
+		if self.remainFreeSpace() < item.Data.Length+ITEM_POINTER_LENGTH {
+			return errors.New("page remaining space insufficient")
+		}
+		writePos := self.Header.UpperOffset - item.Data.Length
+		self.Buffer.WriteBytes(item.Data.Data)
+		self.Header.UpperOffset = writePos
+		self.Dirty = true
+	}
+	return nil
 }

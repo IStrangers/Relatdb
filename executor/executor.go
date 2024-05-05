@@ -47,9 +47,13 @@ func (self *Executor) Execute() (RecordSet, error) {
 func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement) (RecordSet, error) {
 	fields := make([]*meta.Field, len(stmt.ColumnDefinitions))
 	for i, definition := range stmt.ColumnDefinitions {
-		fields = append(fields, meta.NewField(
-			uint(i), self.evalExpression(definition.Name).(string), definition.Type,
-			self.evalExpression(definition.Comment).(string), definition.Flag),
+		comment := ""
+		if definition.Comment != nil {
+			comment = self.evalExpression(definition.Comment).(string)
+		}
+		fields[i] = meta.NewField(
+			uint(i), self.evalExpression(definition.Name).(string),
+			definition.Type, comment, definition.Flag,
 		)
 	}
 	table := meta.NewTable(self.evalExpression(stmt.Name).(string), fields)

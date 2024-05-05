@@ -1,6 +1,7 @@
 package store
 
 import (
+	"Relatdb/common"
 	"os"
 )
 
@@ -22,10 +23,12 @@ func (self *PageStore) readPage(pageIndex int) *Page {
 	buf := make([]byte, DEFAULT_PAGE_SIZE)
 	self.file.Seek(readPos, 0)
 	self.file.Read(buf)
-	buffer := NewBuffer(buf)
+	buffer := common.NewBuffer(buf)
 	return NewPageByBuffer(buffer)
 }
 
-func (self *PageStore) writePage(page *Page) {
-
+func (self *PageStore) writePage(page *Page, pageIndex int) {
+	writePos := int64(pageIndex * DEFAULT_PAGE_SIZE)
+	self.file.Seek(writePos, 0)
+	self.file.Write(page.Buffer.Data)
 }

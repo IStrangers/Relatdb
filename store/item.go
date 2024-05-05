@@ -26,14 +26,12 @@ func NewItemPointer(offset int, tupleLength int) *ItemPointer {
 type ItemData struct {
 	Data   []byte
 	Length int
-	Offset int
 }
 
-func NewItemData(data []byte, length int, offset int) *ItemData {
+func NewItemData(data []byte, length int) *ItemData {
 	return &ItemData{
 		Data:   data,
 		Length: length,
-		Offset: offset,
 	}
 }
 
@@ -63,6 +61,11 @@ func ItemToIndexEntry(item *Item) meta.IndexEntry {
 }
 
 func IndexEntryToItem(entry meta.IndexEntry) *Item {
-
-	return NewItem(nil, nil)
+	var data []byte
+	for _, value := range entry.GetValues() {
+		data = append(data, value.ToBytes()...)
+	}
+	itemPointer := NewItemPointer(-1, len(entry.GetValues()))
+	itemData := NewItemData(data, len(data))
+	return NewItem(itemPointer, itemData)
 }

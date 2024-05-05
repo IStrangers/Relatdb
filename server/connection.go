@@ -234,7 +234,7 @@ func (self *Connection) handlingQuery(querySql string) {
 	defer func() {
 		err := recover()
 		if err != nil {
-			log.Printf("parser query sql error: sql=%s, err=%v\n", querySql, err)
+			log.Printf("handling sql error: sql=%s, err=%v\n", querySql, err)
 		}
 	}()
 	parser := parser.CreateParser(1, querySql, true, true)

@@ -59,12 +59,22 @@ func (self *Store) readTable(path string) (*meta.Table, error) {
 
 func (self *Store) writeTable(table *meta.Table) error {
 	pageStore := NewPageStore(table.MetaPath)
-	itemName := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{}, nil))
-	itemSize := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{}, nil))
+
+	var items []*Item
+	for _, field := range table.Fields {
+		items = append(items, IndexEntryToItem(meta.NewIndexEntry(meta.FieldToValues(field), nil)))
+	}
+	itemName := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.StringValue(table.Name)}, nil))
+	itemSize := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(items) + 1)}, nil))
 	page := NewPage()
-	page.writeItem(itemName)
 	page.writeItem(itemSize)
-	pageStore.writePage(page)
+	page.writeItem(itemName)
+	page.writeItem(items...)
+
+	indexNum := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(table.SecondaryIndexes) + 1)}, nil))
+	page.writeItem(indexNum)
+
+	pageStore.writePage(page, 0)
 	return nil
 }
 
@@ -72,8 +82,8 @@ func (self *Store) CreateTable(table *meta.Table) error {
 	if self.tableMap[table.Name] != nil {
 		return errors.New("table already exists: " + table.Name)
 	}
-	table.MetaPath = utils.ConcatFilePaths(self.path, table.Name, META_SUFFIX)
-	table.DataPath = utils.ConcatFilePaths(self.path, table.Name, DATA_SUFFIX)
+	table.MetaPath = utils.ConcatFilePaths(self.path, table.Name+META_SUFFIX)
+	table.DataPath = utils.ConcatFilePaths(self.path, table.Name+DATA_SUFFIX)
 	err := self.writeTable(table)
 	if err != nil {
 		return err
