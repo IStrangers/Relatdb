@@ -6,8 +6,8 @@ type IndexEntry interface {
 	GetLength() uint
 	GetCompareEntry() IndexEntry
 	GetDeleteCompareEntry() IndexEntry
-	CompareEntry(IndexEntry) int8
-	CompareDeleteEntry(IndexEntry) int8
+	CompareEntry(IndexEntry) int
+	CompareDeleteEntry(IndexEntry) int
 }
 
 type BaseIndexEntry struct {
@@ -24,7 +24,7 @@ func NewIndexEntry(values []Value, desc *IndexDesc) *BaseIndexEntry {
 	return entry
 }
 
-func (self *BaseIndexEntry) innerCompare(entry IndexEntry) int8 {
+func (self *BaseIndexEntry) innerCompare(entry IndexEntry) int {
 	selfValues := self.Values
 	selfValuesLength := len(selfValues)
 	entryValues := entry.GetValues()
@@ -82,11 +82,11 @@ func (self *BaseIndexEntry) GetDeleteCompareEntry() IndexEntry {
 	return self
 }
 
-func (self *BaseIndexEntry) CompareEntry(compareEntry IndexEntry) int8 {
+func (self *BaseIndexEntry) CompareEntry(compareEntry IndexEntry) int {
 	return self.innerCompare(compareEntry.GetCompareEntry())
 }
 
-func (self *BaseIndexEntry) CompareDeleteEntry(compareEntry IndexEntry) int8 {
+func (self *BaseIndexEntry) CompareDeleteEntry(compareEntry IndexEntry) int {
 	return self.innerCompare(compareEntry.GetDeleteCompareEntry())
 }
 
