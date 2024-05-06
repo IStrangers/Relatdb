@@ -2,7 +2,6 @@ package meta
 
 import (
 	"Relatdb/common"
-	"Relatdb/index"
 )
 
 type Table struct {
@@ -12,8 +11,8 @@ type Table struct {
 	Fields           []*Field
 	PrimaryFiled     *Field
 	FieldMap         map[string]uint
-	ClusterIndex     *index.BaseIndex
-	SecondaryIndexes []*index.BaseIndex
+	ClusterIndex     *Index
+	SecondaryIndexes []*Index
 }
 
 func NewTable(name string, fields []*Field) *Table {

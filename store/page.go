@@ -5,25 +5,37 @@ import (
 	"errors"
 )
 
+/*
+1.页存储结构, 写入逻辑：ItemPointer向右写入, ItemData向左写入, 往中间靠拢，中间未写入的就是剩余空间
+MagicWord | LowerOffset | UpperOffset | Special | TupleCount | ItemPointer1 | ItemPointer2 | ItemPointer3
+										剩余空间...
+ItemData1 | ItemData2 | ItemData3 |
+*/
+
 const (
 	DEFAULT_PAGE_SIZE            = 4096
 	DEFAULT_SPECIAL_POINT_LENGTH = 64
 )
 
 const (
-	PAGE_HEADER_SIZE    = 24
-	MAGIC_WORD          = "StorePage"
-	LOWER_POINTER       = 8
-	UPPER_POINTER       = 12
-	SPECIAL_POINTER     = 16
-	TUPLE_COUNT_POINTER = 20
+	PAGE_HEADER_SIZE          = 24
+	MAGIC_WORD                = "MagicWord"
+	LOWER_WRITE_POINTER       = uint(len(MAGIC_WORD)) + 1
+	UPPER_WRITE_POINTER       = LOWER_WRITE_POINTER + 4
+	SPECIAL_WRITE_POINTER     = UPPER_WRITE_POINTER + 4
+	TUPLE_COUNT_WRITE_POINTER = SPECIAL_WRITE_POINTER + 4
 )
 
 type PageHeader struct {
-	LowerOffset  int
-	UpperOffset  int
-	Special      int
-	TupleCount   int
+	//剩余空间起始偏移
+	LowerOffset int
+	//剩余空间末尾偏移
+	UpperOffset int
+	//下一页储偏指针信息的存移
+	Special int
+	//Item数量
+	TupleCount int
+	//页头长度
 	HeaderLength int
 }
 
@@ -76,10 +88,6 @@ func NewPageBySize(size uint) *Page {
 	return page
 }
 
-func (self *Page) remainFreeSpace() int {
-	return self.Header.UpperOffset - self.Header.LowerOffset
-}
-
 func (self *Page) writePageHeader() {
 	self.Buffer.WriteStringWithZero(MAGIC_WORD)
 	self.Buffer.WriteInt(self.Header.LowerOffset)
@@ -88,13 +96,36 @@ func (self *Page) writePageHeader() {
 	self.Buffer.WriteInt(self.Header.TupleCount)
 }
 
+// 剩余可用空间
+func (self *Page) remainFreeSpace() int {
+	return self.Header.UpperOffset - self.Header.LowerOffset
+}
+
+// 更新剩余空间起始偏移
+func (self *Page) updateHeaderLowerOffset(lowerOffset int) {
+	self.Header.LowerOffset = lowerOffset
+	self.Buffer.WriteIntByPos(LOWER_WRITE_POINTER, lowerOffset)
+}
+
+// 更新剩余空间末尾偏移
+func (self *Page) updateHeaderUpperOffset(upperOffset int) {
+	self.Header.UpperOffset = upperOffset
+	self.Buffer.WriteIntByPos(UPPER_WRITE_POINTER, upperOffset)
+}
+
+// 更新Item写入数量
+func (self *Page) updateHeaderTupleCount(tupleCount int) {
+	self.Header.TupleCount = tupleCount
+	self.Buffer.WriteIntByPos(TUPLE_COUNT_WRITE_POINTER, tupleCount)
+}
+
 func (self *Page) readItemPointer() *ItemPointer {
 	return NewItemPointer(self.Buffer.ReadInt(), self.Buffer.ReadInt())
 }
 
 func (self *Page) readItemData(itemPointer *ItemPointer) *ItemData {
 	data := self.Buffer.ReadBytesByOffset(itemPointer.Offset, itemPointer.TupleLength)
-	return NewItemData(data, len(data))
+	return NewItemData(data, itemPointer.TupleLength)
 }
 
 func (self *Page) readItem() *Item {
@@ -119,12 +150,23 @@ func (self *Page) readItems() (items []*Item) {
 
 func (self *Page) writeItem(items ...*Item) error {
 	for _, item := range items {
-		if self.remainFreeSpace() < item.Data.Length+ITEM_POINTER_LENGTH {
+		data := item.Data
+		pointer := item.Pointer
+		if self.remainFreeSpace() < data.Length+ITEM_POINTER_LENGTH {
 			return errors.New("page remaining space insufficient")
 		}
-		writePos := self.Header.UpperOffset - item.Data.Length
-		self.Buffer.WriteBytes(item.Data.Data)
-		self.Header.UpperOffset = writePos
+		//写入ItemData
+		writePos := self.Header.UpperOffset - data.Length
+		self.Buffer.WriteBytesByPos(uint(writePos), data.Data)
+		self.updateHeaderUpperOffset(writePos)
+
+		//写入ItemPointer
+		self.Buffer.WriteInt(writePos)
+		self.Buffer.WriteInt(pointer.TupleLength)
+		self.updateHeaderLowerOffset(self.Header.LowerOffset + ITEM_POINTER_LENGTH)
+
+		self.updateHeaderTupleCount(self.Header.TupleCount + 1)
+		//标记为脏页
 		self.Dirty = true
 	}
 	return nil

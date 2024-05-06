@@ -23,9 +23,12 @@ type Store struct {
 }
 
 func NewStore(options *Options) *Store {
-	return &Store{
-		path: utils.ConcatFilePaths(options.Path),
+	store := &Store{
+		path:     options.Path,
+		tableMap: make(map[string]*meta.Table),
 	}
+	os.MkdirAll(store.path, os.ModePerm)
+	return store
 }
 
 func (self *Store) Init() {
@@ -60,6 +63,7 @@ func (self *Store) readTable(path string) (*meta.Table, error) {
 func (self *Store) writeTable(table *meta.Table) error {
 	pageStore := NewPageStore(table.MetaPath)
 
+	//写入字段
 	var items []*Item
 	for _, field := range table.Fields {
 		items = append(items, IndexEntryToItem(meta.NewIndexEntry(meta.FieldToValues(field), nil)))
@@ -70,9 +74,13 @@ func (self *Store) writeTable(table *meta.Table) error {
 	page.writeItem(itemSize)
 	page.writeItem(itemName)
 	page.writeItem(items...)
-
-	indexNum := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(table.SecondaryIndexes) + 1)}, nil))
-	page.writeItem(indexNum)
+	//写入索引
+	//indexNum := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(table.SecondaryIndexes) + 1)}, nil))
+	//page.writeItem(indexNum)
+	//page.writeItem(IndexToItems(table.ClusterIndex)...)
+	//for _, secondaryIndex := range table.SecondaryIndexes {
+	//	page.writeItem(IndexToItems(secondaryIndex)...)
+	//}
 
 	pageStore.writePage(page, 0)
 	return nil
@@ -81,6 +89,9 @@ func (self *Store) writeTable(table *meta.Table) error {
 func (self *Store) CreateTable(table *meta.Table) error {
 	if self.tableMap[table.Name] != nil {
 		return errors.New("table already exists: " + table.Name)
+	}
+	if table.ClusterIndex == nil {
+		//return errors.New("cluster index is required: " + table.Name)
 	}
 	table.MetaPath = utils.ConcatFilePaths(self.path, table.Name+META_SUFFIX)
 	table.DataPath = utils.ConcatFilePaths(self.path, table.Name+DATA_SUFFIX)

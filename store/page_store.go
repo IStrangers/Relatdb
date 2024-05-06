@@ -11,7 +11,7 @@ type PageStore struct {
 }
 
 func NewPageStore(path string) *PageStore {
-	file, _ := os.OpenFile(path, os.O_RDWR, 0)
+	file, _ := os.OpenFile(path, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	return &PageStore{
 		path: path,
 		file: file,

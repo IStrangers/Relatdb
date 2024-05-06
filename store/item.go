@@ -1,8 +1,8 @@
 package store
 
 import (
+	"Relatdb/common"
 	"Relatdb/meta"
-	"Relatdb/utils"
 )
 
 func GetItemLength(indexEntry meta.IndexEntry) uint {
@@ -49,13 +49,26 @@ func NewItem(pointer *ItemPointer, data *ItemData) *Item {
 	}
 }
 
+func IndexToItems(index *meta.Index) []*Item {
+	return nil
+}
+
 func ItemToIndexEntry(item *Item) meta.IndexEntry {
-	bytesReader := utils.NewBytesReader(item.Data.Data)
+	buffer := common.NewBuffer(item.Data.Data)
 	var values []meta.Value
-	for bytesReader.Remaining() > 0 {
-		fieldType := bytesReader.ReadByte()
-		println(fieldType)
-		break
+	for buffer.Remaining() > 0 {
+		var value meta.Value
+		fieldType := meta.ValueType(buffer.ReadByte())
+		switch fieldType {
+		case meta.StringValueType:
+			length := buffer.ReadInt()
+			value = meta.StringValue(buffer.ReadBytes(uint(length)))
+		case meta.Int64ValueType:
+			value = meta.Int64Value(buffer.ReadInt64())
+		case meta.IntValueType:
+			value = meta.IntValue(buffer.ReadInt())
+		}
+		values = append(values, value)
 	}
 	return meta.NewIndexEntry(values, nil)
 }
@@ -65,7 +78,7 @@ func IndexEntryToItem(entry meta.IndexEntry) *Item {
 	for _, value := range entry.GetValues() {
 		data = append(data, value.ToBytes()...)
 	}
-	itemPointer := NewItemPointer(-1, len(entry.GetValues()))
-	itemData := NewItemData(data, len(data))
+	itemPointer := NewItemPointer(-1, len(data))
+	itemData := NewItemData(data, itemPointer.TupleLength)
 	return NewItem(itemPointer, itemData)
 }
