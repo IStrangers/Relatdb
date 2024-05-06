@@ -3,7 +3,6 @@ package store
 import (
 	"Relatdb/meta"
 	"Relatdb/utils"
-	"errors"
 	"os"
 	"strings"
 )
@@ -27,29 +26,23 @@ func NewStore(options *Options) *Store {
 		path:     options.Path,
 		tableMap: make(map[string]*meta.Table),
 	}
-	os.MkdirAll(store.path, os.ModePerm)
+	_ = os.MkdirAll(store.path, os.ModePerm)
 	return store
 }
 
 func (self *Store) Init() {
-	metaDir, err := os.ReadDir(self.path)
-	if err != nil {
-		panic(err)
-	}
+	metaDir, _ := os.ReadDir(self.path)
 	for _, entry := range metaDir {
 		fileName := entry.Name()
 		if !strings.HasSuffix(fileName, META_SUFFIX) {
 			continue
 		}
-		table, err := self.readTable(utils.ConcatFilePaths(self.path, fileName))
-		if err != nil {
-			panic(err)
-		}
+		table := self.readTable(utils.ConcatFilePaths(self.path, fileName))
 		self.tableMap[table.Name] = table
 	}
 }
 
-func (self *Store) readTable(path string) (*meta.Table, error) {
+func (self *Store) readTable(path string) *meta.Table {
 	pageStore := NewPageStore(path)
 	page := pageStore.readPage(0)
 	items := page.readItems()
@@ -57,10 +50,10 @@ func (self *Store) readTable(path string) (*meta.Table, error) {
 	for _, item := range items {
 		entries = append(entries, ItemToIndexEntry(item))
 	}
-	return &meta.Table{}, nil
+	return &meta.Table{}
 }
 
-func (self *Store) writeTable(table *meta.Table) error {
+func (self *Store) writeTable(table *meta.Table) {
 	pageStore := NewPageStore(table.MetaPath)
 
 	//写入字段
@@ -75,30 +68,26 @@ func (self *Store) writeTable(table *meta.Table) error {
 	page.writeItem(itemName)
 	page.writeItem(items...)
 	//写入索引
-	//indexNum := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(table.SecondaryIndexes) + 1)}, nil))
-	//page.writeItem(indexNum)
-	//page.writeItem(IndexToItems(table.ClusterIndex)...)
-	//for _, secondaryIndex := range table.SecondaryIndexes {
-	//	page.writeItem(IndexToItems(secondaryIndex)...)
-	//}
+	itemIndexQuantity := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(table.SecondaryIndexes) + 1)}, nil))
+	page.writeItem(itemIndexQuantity)
+	page.writeItem(IndexToItems(table.ClusterIndex)...)
+	for _, secondaryIndex := range table.SecondaryIndexes {
+		page.writeItem(IndexToItems(secondaryIndex)...)
+	}
 
 	pageStore.writePage(page, 0)
-	return nil
 }
 
-func (self *Store) CreateTable(table *meta.Table) error {
+func (self *Store) CreateTable(table *meta.Table) {
 	if self.tableMap[table.Name] != nil {
-		return errors.New("table already exists: " + table.Name)
+		panic("table already exists: " + table.Name)
 	}
 	if table.ClusterIndex == nil {
 		//return errors.New("cluster index is required: " + table.Name)
 	}
 	table.MetaPath = utils.ConcatFilePaths(self.path, table.Name+META_SUFFIX)
 	table.DataPath = utils.ConcatFilePaths(self.path, table.Name+DATA_SUFFIX)
-	err := self.writeTable(table)
-	if err != nil {
-		return err
-	}
+	self.writeTable(table)
+
 	self.tableMap[table.Name] = table
-	return nil
 }

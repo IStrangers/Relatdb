@@ -49,8 +49,15 @@ func NewItem(pointer *ItemPointer, data *ItemData) *Item {
 	}
 }
 
-func IndexToItems(index *meta.Index) []*Item {
-	return nil
+func IndexToItems(index meta.Index) []*Item {
+	itemSize := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(1 + len(index.GetFields()) + 1)}, nil))
+	itemName := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.StringValue(index.GetName())}, nil))
+	itemFlag := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(index.GetFlag())}, nil))
+	items := []*Item{itemSize, itemName, itemFlag}
+	for _, field := range index.GetFields() {
+		items = append(items, IndexEntryToItem(meta.NewIndexEntry(meta.FieldToValues(field), nil)))
+	}
+	return items
 }
 
 func ItemToIndexEntry(item *Item) meta.IndexEntry {

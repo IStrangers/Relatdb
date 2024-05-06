@@ -1,9 +1,21 @@
 package bptree
 
-import "Relatdb/index"
+import (
+	"Relatdb/meta"
+)
 
 type BPTree struct {
-	index.BaseIndex
+	meta.BaseIndex
 	Root *BPNode
 	Head *BPNode
+}
+
+func NewBPTree(name string, fields []*meta.Field, flag uint) *BPTree {
+	bpTree := &BPTree{}
+	bpTree.Name = name
+	bpTree.Fields = fields
+	bpTree.FLag = flag
+	bpTree.Root = NewBPNode(bpTree, true, true)
+	bpTree.Head = bpTree.Root
+	return bpTree
 }

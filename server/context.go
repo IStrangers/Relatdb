@@ -24,9 +24,6 @@ func NewContext(conn *Connection) *Context {
 
 func (self *Context) executeStmt(stmt ast.Statement) {
 	executor := executor.NewExecutor(self, stmt)
-	recordSet, err := executor.Execute()
-	if err != nil {
-		return
-	}
+	recordSet := executor.Execute()
 	println(recordSet)
 }

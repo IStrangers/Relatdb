@@ -1,6 +1,8 @@
 package executor
 
 import (
+	"Relatdb/common"
+	"Relatdb/index/bptree"
 	"Relatdb/meta"
 	"Relatdb/parser/ast"
 	"Relatdb/store"
@@ -36,28 +38,38 @@ func (self *Executor) evalExpression(expr ast.Expression) any {
 	}
 }
 
-func (self *Executor) Execute() (RecordSet, error) {
+func (self *Executor) Execute() RecordSet {
 	switch stmt := self.stmt.(type) {
 	case *ast.CreateTableStatement:
 		return self.executeCreateTableStatement(stmt)
 	}
-	return nil, nil
+	return nil
 }
 
-func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement) (RecordSet, error) {
+func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement) RecordSet {
 	fields := make([]*meta.Field, len(stmt.ColumnDefinitions))
+	var primaryFiled *meta.Field
+	var fieldMap map[string]uint
+	var clusterIndex meta.Index
+	var secondaryIndexes []meta.Index
 	for i, definition := range stmt.ColumnDefinitions {
 		comment := ""
 		if definition.Comment != nil {
 			comment = self.evalExpression(definition.Comment).(string)
 		}
-		fields[i] = meta.NewField(
+		field := meta.NewField(
 			uint(i), self.evalExpression(definition.Name).(string),
 			definition.Type, comment, definition.Flag,
 		)
+		if field.Flag&common.PRIMARY_KEY_FLAG != 0 {
+			primaryFiled = field
+			clusterIndex = bptree.NewBPTree(field.Name, []*meta.Field{primaryFiled}, field.Flag)
+		}
+		fields[i] = field
+		fieldMap[field.Name] = field.Index
 	}
-	table := meta.NewTable(self.evalExpression(stmt.Name).(string), fields)
+	table := meta.NewTable(self.evalExpression(stmt.Name).(string), fields, primaryFiled, fieldMap, clusterIndex, secondaryIndexes)
 	store := self.ctx.GetStore()
-	err := store.CreateTable(table)
-	return nil, err
+	store.CreateTable(table)
+	return nil
 }

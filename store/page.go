@@ -2,7 +2,6 @@ package store
 
 import (
 	"Relatdb/common"
-	"errors"
 )
 
 /*
@@ -148,12 +147,12 @@ func (self *Page) readItems() (items []*Item) {
 	return
 }
 
-func (self *Page) writeItem(items ...*Item) error {
+func (self *Page) writeItem(items ...*Item) {
 	for _, item := range items {
 		data := item.Data
 		pointer := item.Pointer
 		if self.remainFreeSpace() < data.Length+ITEM_POINTER_LENGTH {
-			return errors.New("page remaining space insufficient")
+			panic("page remaining space insufficient")
 		}
 		//写入ItemData
 		writePos := self.Header.UpperOffset - data.Length
@@ -169,5 +168,4 @@ func (self *Page) writeItem(items ...*Item) error {
 		//标记为脏页
 		self.Dirty = true
 	}
-	return nil
 }
