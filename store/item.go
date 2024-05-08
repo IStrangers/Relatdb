@@ -74,6 +74,8 @@ func ItemToIndexEntry(item *Item) meta.IndexEntry {
 			value = meta.Int64Value(buffer.ReadInt64())
 		case meta.IntValueType:
 			value = meta.IntValue(buffer.ReadInt())
+		case meta.NullValueType:
+			value = meta.CONST_NULL_VALUE
 		}
 		values = append(values, value)
 	}

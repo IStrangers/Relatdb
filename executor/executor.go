@@ -25,6 +25,13 @@ func NewExecutor(ctx ExecuteContext, stmt ast.Statement) *Executor {
 	}
 }
 
+func (self *Executor) evalExpressionOrDefaultValue(expr ast.Expression, defaultValue any) any {
+	if expr == nil {
+		return defaultValue
+	}
+	return self.evalExpression(expr)
+}
+
 func (self *Executor) evalExpression(expr ast.Expression) any {
 	switch expr := expr.(type) {
 	case *ast.TableName:
@@ -47,19 +54,17 @@ func (self *Executor) Execute() RecordSet {
 }
 
 func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement) RecordSet {
-	fields := make([]*meta.Field, len(stmt.ColumnDefinitions))
+	fieldLength := len(stmt.ColumnDefinitions)
+	fields := make([]*meta.Field, fieldLength)
 	var primaryFiled *meta.Field
-	var fieldMap map[string]uint
+	fieldMap := make(map[string]uint, fieldLength)
 	var clusterIndex meta.Index
 	var secondaryIndexes []meta.Index
 	for i, definition := range stmt.ColumnDefinitions {
-		comment := ""
-		if definition.Comment != nil {
-			comment = self.evalExpression(definition.Comment).(string)
-		}
 		field := meta.NewField(
-			uint(i), self.evalExpression(definition.Name).(string),
-			definition.Type, comment, definition.Flag,
+			uint(i), self.evalExpression(definition.Name).(string), definition.Type, definition.Flag,
+			meta.ToValue(self.evalExpressionOrDefaultValue(definition.DefaultValue, nil)),
+			self.evalExpressionOrDefaultValue(definition.Comment, "").(string),
 		)
 		if field.Flag&common.PRIMARY_KEY_FLAG != 0 {
 			primaryFiled = field

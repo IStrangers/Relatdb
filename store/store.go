@@ -50,26 +50,46 @@ func (self *Store) readTable(path string) *meta.Table {
 	for _, item := range items {
 		entries = append(entries, ItemToIndexEntry(item))
 	}
-	return &meta.Table{}
+	metaQuantity := entries[0].GetValues()[0].ToInt()
+	tableName := entries[1].GetValues()[0].ToString()
+	var fields []*meta.Field
+	for i := 2; i <= metaQuantity; i++ {
+		values := entries[i].GetValues()
+		fields = append(fields, meta.NewField(
+			uint(values[0].ToInt()), values[1].ToString(),
+			byte(values[2].ToInt()), uint(values[3].ToInt()),
+			values[4], values[5].ToString(),
+		))
+	}
+	indexQuantity := entries[metaQuantity+1].GetValues()[0].ToInt()
+	for range indexQuantity {
+
+	}
+	return &meta.Table{
+		MetaPath: path,
+		DataPath: strings.ReplaceAll(path, META_SUFFIX, DATA_SUFFIX),
+		Name:     tableName,
+		Fields:   fields,
+	}
 }
 
 func (self *Store) writeTable(table *meta.Table) {
 	pageStore := NewPageStore(table.MetaPath)
 
 	//写入字段
-	var items []*Item
+	var fields []*Item
 	for _, field := range table.Fields {
-		items = append(items, IndexEntryToItem(meta.NewIndexEntry(meta.FieldToValues(field), nil)))
+		fields = append(fields, IndexEntryToItem(meta.NewIndexEntry(meta.FieldToValues(field), nil)))
 	}
-	itemName := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.StringValue(table.Name)}, nil))
-	itemSize := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(items) + 1)}, nil))
+	metaQuantity := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(fields) + 1)}, nil))
+	tableName := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.StringValue(table.Name)}, nil))
 	page := NewPage()
-	page.writeItem(itemSize)
-	page.writeItem(itemName)
-	page.writeItem(items...)
+	page.writeItem(metaQuantity)
+	page.writeItem(tableName)
+	page.writeItem(fields...)
 	//写入索引
-	itemIndexQuantity := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(table.SecondaryIndexes) + 1)}, nil))
-	page.writeItem(itemIndexQuantity)
+	indexQuantity := IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(table.SecondaryIndexes) + 1)}, nil))
+	page.writeItem(indexQuantity)
 	page.writeItem(IndexToItems(table.ClusterIndex)...)
 	for _, secondaryIndex := range table.SecondaryIndexes {
 		page.writeItem(IndexToItems(secondaryIndex)...)

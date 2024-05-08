@@ -72,7 +72,7 @@ func (self *BaseIndexEntry) GetLength() uint {
 }
 
 func (self *BaseIndexEntry) GetCompareEntry() IndexEntry {
-	if self.CompareEntry == nil {
+	if self.IndexEntry == nil {
 		self.IndexEntry = NewNotLeafIndexEntry(self.Values[:], self.Desc)
 	}
 	return self.IndexEntry

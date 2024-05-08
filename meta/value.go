@@ -2,6 +2,7 @@ package meta
 
 import (
 	"Relatdb/common"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -13,6 +14,11 @@ const (
 	StringValueType
 	Int64ValueType
 	IntValueType
+	NullValueType
+)
+
+var (
+	CONST_NULL_VALUE = &NullValue{}
 )
 
 type Value interface {
@@ -141,12 +147,70 @@ func (self IntValue) Compare(value Value) int {
 	return 0
 }
 
+type NullValue struct{}
+
+func (self NullValue) GetType() ValueType {
+	return NullValueType
+}
+
+func (self NullValue) ToString() string {
+	return ""
+}
+
+func (self NullValue) ToInt() int {
+	return 0
+}
+
+func (self NullValue) ToInt64() int64 {
+	return 0
+}
+
+func (self NullValue) ToBytes() []byte {
+	buffer := common.NewBufferBySize(self.GetLength())
+	buffer.WriteByte(byte(self.GetType()))
+	return buffer.Data
+}
+
+func (self NullValue) GetLength() uint {
+	return 1
+}
+
+func (self NullValue) Compare(value Value) int {
+	if value.GetType() == NullValueType {
+		return 0
+	}
+	return -1
+}
+
+func ToValue(val any) Value {
+	if val == nil {
+		return CONST_NULL_VALUE
+	}
+	switch v := val.(type) {
+	case string:
+		return StringValue(v)
+	case int:
+		return IntValue(v)
+	case uint:
+		return IntValue(v)
+	case int64:
+		return Int64Value(v)
+	case uint64:
+		return Int64Value(v)
+	case Value:
+		return v
+	default:
+		panic(fmt.Sprintf("TOValue:unknown value type: %T", v))
+	}
+}
+
 func FieldToValues(field *Field) []Value {
 	return []Value{
 		IntValue(field.Index),
 		StringValue(field.Name),
 		IntValue(field.Type),
-		StringValue(field.Comment),
 		IntValue(field.Flag),
+		field.DefaultValue,
+		StringValue(field.Comment),
 	}
 }
