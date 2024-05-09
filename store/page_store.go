@@ -18,7 +18,7 @@ func NewPageStore(path string) *PageStore {
 	}
 }
 
-func (self *PageStore) readPage(pageIndex int) *Page {
+func (self *PageStore) ReadPage(pageIndex int) *Page {
 	readPos := int64(pageIndex * DEFAULT_PAGE_SIZE)
 	buf := make([]byte, DEFAULT_PAGE_SIZE)
 	self.file.Seek(readPos, 0)
@@ -27,7 +27,7 @@ func (self *PageStore) readPage(pageIndex int) *Page {
 	return NewPageByBuffer(buffer)
 }
 
-func (self *PageStore) writePage(page *Page, pageIndex int) {
+func (self *PageStore) WritePage(page *Page, pageIndex int) {
 	writePos := int64(pageIndex * DEFAULT_PAGE_SIZE)
 	self.file.Seek(writePos, 0)
 	self.file.Write(page.Buffer.Data)

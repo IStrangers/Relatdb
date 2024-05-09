@@ -10,7 +10,7 @@ import (
 )
 
 type ExecuteContext interface {
-	GetStore() *store.Store
+	GetStore() store.Store
 }
 
 type Executor struct {
@@ -40,6 +40,13 @@ func (self *Executor) evalExpression(expr ast.Expression) any {
 		return expr.Name
 	case *ast.StringLiteral:
 		return expr.Value
+	case *ast.NumberLiteral:
+		return expr.Value
+	case *ast.BooleanLiteral:
+		if expr.Value {
+			return 1
+		}
+		return 0
 	default:
 		panic(fmt.Errorf("unsupported expression type: %T", expr))
 	}

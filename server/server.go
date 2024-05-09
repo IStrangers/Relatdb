@@ -18,10 +18,10 @@ type Server struct {
 
 	autoConnId uint64
 	connMap    map[uint64]*Connection
-	store      *store.Store
+	store      store.Store
 }
 
-func NewServer(options *Options, store *store.Store) *Server {
+func NewServer(options *Options, store store.Store) *Server {
 	server := &Server{
 		version: SERVER_VERSION,
 		options: options,

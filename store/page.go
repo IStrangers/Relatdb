@@ -136,7 +136,7 @@ func (self *Page) readItem() *Item {
 	return NewItem(itemPointer, itemData)
 }
 
-func (self *Page) readItems() (items []*Item) {
+func (self *Page) ReadItems() (items []*Item) {
 	for _ = range self.Header.TupleCount {
 		item := self.readItem()
 		if item == nil {
@@ -147,7 +147,7 @@ func (self *Page) readItems() (items []*Item) {
 	return
 }
 
-func (self *Page) writeItem(items ...*Item) {
+func (self *Page) WriteItem(items ...*Item) {
 	for _, item := range items {
 		data := item.Data
 		pointer := item.Pointer

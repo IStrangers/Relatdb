@@ -11,7 +11,7 @@ type Context struct {
 	session *Session
 }
 
-func (self *Context) GetStore() *store.Store {
+func (self *Context) GetStore() store.Store {
 	return self.conn.server.store
 }
 

@@ -10,6 +10,7 @@ func GetItemLength(indexEntry meta.IndexEntry) uint {
 }
 
 const ITEM_POINTER_LENGTH = 8
+const ITEM_INT_LENGTH = ITEM_POINTER_LENGTH + 5
 
 type ItemPointer struct {
 	Offset      int
@@ -34,8 +35,6 @@ func NewItemData(data []byte, length int) *ItemData {
 		Length: length,
 	}
 }
-
-const ITEM_INT_LENGTH = ITEM_POINTER_LENGTH + 5
 
 type Item struct {
 	Pointer *ItemPointer

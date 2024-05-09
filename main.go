@@ -2,14 +2,14 @@ package main
 
 import (
 	"Relatdb/server"
-	"Relatdb/store"
+	"Relatdb/store/icna"
 	"Relatdb/utils"
 	"os"
 )
 
 func main() {
 	wd, _ := os.Getwd()
-	store := store.NewStore(&store.Options{
+	store := icna.NewIcnaStore(&icna.Options{
 		Path: utils.ConcatFilePaths(wd, "data"),
 	})
 	server := server.NewServer(&server.Options{

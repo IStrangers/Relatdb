@@ -1,7 +1,6 @@
 package bptree
 
 import (
-	"Relatdb/index"
 	"Relatdb/meta"
 	"Relatdb/store"
 	"errors"
@@ -412,10 +411,10 @@ func (self *BPNode) internalMerge(bpTree *BPTree) {
 }
 
 // 获取
-func (self *BPNode) Get(key meta.IndexEntry, compareType index.CompareType) *BPPosition {
+func (self *BPNode) Get(key meta.IndexEntry, compareType meta.CompareType) *BPPosition {
 	//叶子节点
 	if self.isLeaf {
-		if compareType == index.COMPARE_EQUAL {
+		if compareType == meta.COMPARE_EQUAL {
 			//查找相等的Entries
 			for i, entry := range self.Entries {
 				if key.CompareEntry(entry) != 0 {
@@ -423,7 +422,7 @@ func (self *BPNode) Get(key meta.IndexEntry, compareType index.CompareType) *BPP
 				}
 				return NewBPPosition(nil, uint(i), self)
 			}
-		} else if compareType == index.COMPARE_LOW {
+		} else if compareType == meta.COMPARE_LOW {
 			return NewBPPosition(nil, 0, self)
 		} else {
 			return NewBPPosition(nil, uint(len(self.Entries)-1), self)
