@@ -11,6 +11,7 @@ var (
 	SERVER_AUTH_OK      = []byte{7, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0}
 	OK_HEADER      byte = 0x00
 	ERR_HEADER     byte = 0xff
+	EOFHeader      byte = 0xfe
 )
 
 type DataPacket interface {
