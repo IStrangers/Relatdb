@@ -121,7 +121,7 @@ func (self *IcnaStore) CreateTable(table *meta.Table) {
 		panic("table already exists: " + table.Name)
 	}
 	if table.ClusterIndex == nil {
-		//return errors.New("cluster index is required: " + table.Name)
+		panic("cluster index is required: " + table.Name)
 	}
 	table.MetaPath = utils.ConcatFilePaths(self.path, table.Name+META_SUFFIX)
 	table.DataPath = utils.ConcatFilePaths(self.path, table.Name+DATA_SUFFIX)

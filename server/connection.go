@@ -65,7 +65,7 @@ func (self *Connection) write(bytes []byte) {
 func (self *Connection) writeErrorMessage(packetId byte, errorCode uint16, message string) {
 	errorPacket := &ErrorPacket{}
 	errorPacket.PacketId = packetId
-	errorPacket.FieldCount = 0xff
+	errorPacket.ErrorHeader = ERR_HEADER
 	errorPacket.ErrorCode = errorCode
 	errorPacket.SqlStateMarker = '#'
 	errorPacket.SqlState = []byte("HY000")
@@ -88,6 +88,17 @@ func (self *Connection) sendHandshakePacket() {
 	}
 	self.authPluginDataPart = append(handshakePacket.AuthPluginDataPart1, handshakePacket.AuthPluginDataPart2...)
 	self.sendDataPacket(handshakePacket)
+}
+
+func (self *Connection) sendOkPacket(packetId byte, affectedRows uint64, insertId uint64) {
+	okPacket := &OkPacket{}
+	okPacket.PacketId = packetId
+	okPacket.OkHeader = OK_HEADER
+	okPacket.AffectedRows = affectedRows
+	okPacket.InsertId = insertId
+	okPacket.ServerStatus = 2
+	okPacket.WarningCount = 0
+	self.sendDataPacket(okPacket)
 }
 
 func (self *Connection) sendDataPacket(dataPacket DataPacket) {
@@ -250,7 +261,15 @@ func (self *Connection) handlingQuery(querySql string) {
 }
 
 func (self *Connection) handlingStmt(ctx *Context, stmt ast.Statement, isLastStmt bool) {
-	ctx.executeStmt(stmt)
+	recordSet := ctx.executeStmt(stmt)
+	columns := recordSet.GetColumns()
+	rows := recordSet.GetRows()
+
+	packetId := byte(0)
+	if columns != nil && rows != nil {
+
+	}
+	self.sendOkPacket(packetId, recordSet.GetAffectedRows(), recordSet.GetInsertId())
 }
 
 func (self *Connection) handlingStmtPrepare() {

@@ -6,9 +6,6 @@ const SERVER_ROOT_PASSWORD = "123456"
 const PROTOCOL_VERSION = 10
 const MAX_PACKET_SIZE = 16 * 1024 * 1024
 
-var SERVER_OK = []byte{7, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0}
-var SERVER_AUTH_OK = []byte{7, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0}
-
 /*
  * Capabilities
  */

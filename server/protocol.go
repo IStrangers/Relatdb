@@ -6,6 +6,13 @@ import (
 	"encoding/binary"
 )
 
+var (
+	SERVER_OK           = []byte{7, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0}
+	SERVER_AUTH_OK      = []byte{7, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0}
+	OK_HEADER      byte = 0x00
+	ERR_HEADER     byte = 0xff
+)
+
 type DataPacket interface {
 	GetPacketId() byte
 	GetPacketBytes() []byte
@@ -140,9 +147,43 @@ func readLength(bytesReader *utils.BytesReader) uint64 {
 	}
 }
 
+func lengthEncodedInt(buf *bytes.Buffer, n uint64) {
+	switch {
+	case n < 251:
+		buf.WriteByte(byte(n))
+	case n <= 0xffff:
+		buf.Write([]byte{252, byte(n), byte(n >> 8)})
+	case n <= 0xffffff:
+		buf.Write([]byte{253, byte(n), byte(n >> 8), byte(n >> 16)})
+	case n <= 0xffffffffffffffff:
+		buf.Write([]byte{254, byte(n), byte(n >> 8), byte(n >> 16), byte(n >> 24), byte(n >> 32), byte(n >> 40), byte(n >> 48), byte(n >> 56)})
+	}
+}
+
+type OkPacket struct {
+	AbstractDataPacket
+	OkHeader     byte
+	AffectedRows uint64 //影响行数
+	InsertId     uint64 //插入ID
+	ServerStatus uint16
+	WarningCount uint16
+}
+
+func (self *OkPacket) GetPacketBytes() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(self.PacketId)
+	buf.WriteByte(self.OkHeader)
+	lengthEncodedInt(&buf, self.AffectedRows)
+	lengthEncodedInt(&buf, self.AffectedRows)
+	binary.Write(&buf, binary.LittleEndian, self.ServerStatus)
+	binary.Write(&buf, binary.LittleEndian, self.WarningCount)
+	bytes := buf.Bytes()
+	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
+}
+
 type ErrorPacket struct {
 	AbstractDataPacket
-	FieldCount     byte   //包中的字段个数
+	ErrorHeader    byte
 	ErrorCode      uint16 //错误代码
 	SqlStateMarker byte   //SQL状态标识符
 	SqlState       []byte //SQL状态
@@ -152,7 +193,7 @@ type ErrorPacket struct {
 func (self *ErrorPacket) GetPacketBytes() []byte {
 	var buf bytes.Buffer
 	buf.WriteByte(self.PacketId)
-	buf.WriteByte(self.FieldCount)
+	buf.WriteByte(self.ErrorHeader)
 	binary.Write(&buf, binary.LittleEndian, self.ErrorCode)
 	buf.WriteByte(self.SqlStateMarker)
 	buf.Write(self.SqlState)

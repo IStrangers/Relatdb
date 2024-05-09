@@ -11,7 +11,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	rows, err := db.Query(`
+	res, err := db.Exec(`
 		create table myBase.User(
 		    id INT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
     		email VARCHAR(50) UNIQUE COMMENT '邮箱',
@@ -20,7 +20,8 @@ func main() {
 		);
 	`)
 	if err != nil {
+		panic(err)
 		return
 	}
-	println(rows)
+	println(res)
 }

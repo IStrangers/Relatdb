@@ -54,9 +54,16 @@ func (self *Executor) evalExpression(expr ast.Expression) any {
 
 func (self *Executor) Execute() RecordSet {
 	switch stmt := self.stmt.(type) {
+	case *ast.ShowStatement:
+		return self.executeShowStatement(stmt)
 	case *ast.CreateTableStatement:
 		return self.executeCreateTableStatement(stmt)
+	default:
+		panic(fmt.Errorf("unsupported statement type: %T", stmt))
 	}
+}
+
+func (self *Executor) executeShowStatement(stmt *ast.ShowStatement) RecordSet {
 	return nil
 }
 
@@ -83,5 +90,5 @@ func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement
 	table := meta.NewTable(self.evalExpression(stmt.Name).(string), fields, primaryFiled, fieldMap, clusterIndex, secondaryIndexes)
 	store := self.ctx.GetStore()
 	store.CreateTable(table)
-	return nil
+	return NewRecordSet(0, 0, nil, nil)
 }
