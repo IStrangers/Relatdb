@@ -12,6 +12,7 @@ var (
 	OK_HEADER      byte = 0x00
 	ERR_HEADER     byte = 0xff
 	EOFHeader      byte = 0xfe
+	CatalogVal          = "def"
 )
 
 type DataPacket interface {
@@ -161,6 +162,25 @@ func lengthEncodedInt(buf *bytes.Buffer, n uint64) {
 	}
 }
 
+func lengthEncodedBytes(buf *bytes.Buffer, bytes []byte) {
+	n := len(bytes)
+	switch {
+	case n < 251:
+		buf.WriteByte(byte(n))
+	case n <= 0xffff:
+		buf.WriteByte(252)
+	case n <= 0xffffff:
+		buf.WriteByte(253)
+	case n <= 0xffffffffffffffff:
+		buf.WriteByte(254)
+	}
+	buf.Write(bytes)
+}
+
+func lengthEncodedString(buf *bytes.Buffer, s string) {
+	lengthEncodedBytes(buf, []byte(s))
+}
+
 type OkPacket struct {
 	AbstractDataPacket
 	OkHeader     byte
@@ -199,6 +219,61 @@ func (self *ErrorPacket) GetPacketBytes() []byte {
 	buf.WriteByte(self.SqlStateMarker)
 	buf.Write(self.SqlState)
 	buf.Write(self.Message)
+	bytes := buf.Bytes()
+	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
+}
+
+type ColumnPacket struct {
+	AbstractDataPacket
+	Catalog    string
+	Database   string
+	Table      string
+	OrgTable   string
+	Name       string
+	OrgName    string
+	Charset    uint
+	Length     uint64
+	Type       uint64
+	Flag       uint
+	Decimals   byte
+	Definition []byte
+}
+
+func (self *ColumnPacket) GetPacketBytes() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(self.PacketId)
+	lengthEncodedString(&buf, self.Catalog)
+	if self.Database == "" {
+		buf.WriteByte(0)
+	} else {
+		lengthEncodedString(&buf, self.Database)
+	}
+	if self.Table == "" {
+		buf.WriteByte(0)
+	} else {
+		lengthEncodedString(&buf, self.Table)
+	}
+	if self.OrgTable == "" {
+		buf.WriteByte(0)
+	} else {
+		lengthEncodedString(&buf, self.OrgTable)
+	}
+	if self.OrgName == "" {
+		buf.WriteByte(0)
+	} else {
+		lengthEncodedString(&buf, self.OrgName)
+	}
+	buf.WriteByte(0x0c)
+	binary.Write(&buf, binary.LittleEndian, self.Charset)
+	binary.Write(&buf, binary.LittleEndian, self.Length)
+	binary.Write(&buf, binary.LittleEndian, self.Type)
+	binary.Write(&buf, binary.LittleEndian, self.Flag)
+	buf.WriteByte(self.Decimals)
+	filler := []byte{0, 0}
+	buf.Write(filler)
+	if len(self.Definition) > 0 {
+		lengthEncodedBytes(&buf, self.Definition)
+	}
 	bytes := buf.Bytes()
 	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
 }
