@@ -116,7 +116,6 @@ func (self *Connection) receiveBinaryPacket() *BinaryPacket {
 	packetId := self.readByte()
 	data := self.ReadBySize(packetSize)
 	binaryPacket := &BinaryPacket{}
-	binaryPacket.PacketSize = packetSize
 	binaryPacket.PacketId = packetId
 	binaryPacket.Data = data
 	return binaryPacket
@@ -265,11 +264,11 @@ func (self *Connection) handlingStmt(ctx *Context, stmt ast.Statement, isLastStm
 	columns := recordSet.GetColumns()
 	rows := recordSet.GetRows()
 
-	packetId := byte(0)
 	if columns != nil && rows != nil {
-
+		selectPacket := NewSelectPacket(columns)
+		self.sendDataPacket(selectPacket)
 	}
-	self.sendOkPacket(packetId, recordSet.GetAffectedRows(), recordSet.GetInsertId())
+	self.sendOkPacket(byte(len(columns)+1), recordSet.GetAffectedRows(), recordSet.GetInsertId())
 }
 
 func (self *Connection) handlingStmtPrepare() {

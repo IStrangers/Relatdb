@@ -1,6 +1,8 @@
 package server
 
 import (
+	"Relatdb/common"
+	"Relatdb/meta"
 	"Relatdb/utils"
 	"bytes"
 	"encoding/binary"
@@ -21,8 +23,7 @@ type DataPacket interface {
 }
 
 type AbstractDataPacket struct {
-	PacketSize uint32
-	PacketId   byte
+	PacketId byte
 }
 
 func (self *AbstractDataPacket) GetPacketId() byte {
@@ -105,7 +106,6 @@ func (self *AuthPacket) GetPacketBytes() []byte {
 func LoadAuthPacket(packet *BinaryPacket) *AuthPacket {
 	authPacket := &AuthPacket{}
 	bytesReader := utils.NewBytesReader(packet.Data)
-	authPacket.PacketSize = packet.PacketSize
 	authPacket.PacketId = packet.PacketId
 	authPacket.ClientFlags = bytesReader.ReadLittleEndianUint32()
 	authPacket.MaxPacketSize = bytesReader.ReadLittleEndianUint32()
@@ -163,7 +163,7 @@ func lengthEncodedInt(buf *bytes.Buffer, n uint64) {
 }
 
 func lengthEncodedBytes(buf *bytes.Buffer, bytes []byte) {
-	n := len(bytes)
+	n := uint64(len(bytes))
 	switch {
 	case n < 251:
 		buf.WriteByte(byte(n))
@@ -179,6 +179,19 @@ func lengthEncodedBytes(buf *bytes.Buffer, bytes []byte) {
 
 func lengthEncodedString(buf *bytes.Buffer, s string) {
 	lengthEncodedBytes(buf, []byte(s))
+}
+
+func getIntLength(n uint64) uint {
+	switch {
+	case n < 251:
+		return 1
+	case n <= 0xffff:
+		return 3
+	case n <= 0xffffff:
+		return 4
+	default:
+		return 9
+	}
 }
 
 type OkPacket struct {
@@ -219,6 +232,23 @@ func (self *ErrorPacket) GetPacketBytes() []byte {
 	buf.WriteByte(self.SqlStateMarker)
 	buf.Write(self.SqlState)
 	buf.Write(self.Message)
+	bytes := buf.Bytes()
+	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
+}
+
+type EofPacket struct {
+	AbstractDataPacket
+	EofHeader    byte
+	WarningCount uint16
+	ServerStatus uint16
+}
+
+func (self *EofPacket) GetPacketBytes() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(self.PacketId)
+	buf.WriteByte(self.EofHeader)
+	binary.Write(&buf, binary.LittleEndian, self.WarningCount)
+	binary.Write(&buf, binary.LittleEndian, self.ServerStatus)
 	bytes := buf.Bytes()
 	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
 }
@@ -274,6 +304,51 @@ func (self *ColumnPacket) GetPacketBytes() []byte {
 	if len(self.Definition) > 0 {
 		lengthEncodedBytes(&buf, self.Definition)
 	}
+	bytes := buf.Bytes()
+	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
+}
+
+type SelectPacket struct {
+	AbstractDataPacket
+	ColumnPackets []*ColumnPacket
+}
+
+func NewSelectPacket(columns []meta.Value) *SelectPacket {
+	packetId := 2
+	var columnPackets []*ColumnPacket
+	for _, column := range columns {
+		columnPacket := &ColumnPacket{
+			Name: column.ToString(),
+			Type: common.FIELD_TYPE_VAR_STRING,
+		}
+		columnPacket.PacketId = byte(packetId)
+		columnPackets = append(columnPackets, columnPacket)
+		packetId++
+	}
+	selectPacket := &SelectPacket{
+		ColumnPackets: columnPackets,
+	}
+	selectPacket.PacketId = 1
+	return selectPacket
+}
+
+func (self *SelectPacket) GetPacketBytes() []byte {
+	var buf bytes.Buffer
+	columnCount := uint64(len(self.ColumnPackets))
+	buf.Write(getDataLengthBytes(uint32(getIntLength(columnCount))))
+	buf.WriteByte(self.PacketId)
+	lengthEncodedInt(&buf, columnCount)
+
+	for _, columnPacket := range self.ColumnPackets {
+		bytes := columnPacket.GetPacketBytes()
+		buf.Write(bytes)
+	}
+	columnsEofPacket := &EofPacket{}
+	buf.Write(columnsEofPacket.GetPacketBytes())
+
+	rowsEofPacket := &EofPacket{}
+	buf.Write(rowsEofPacket.GetPacketBytes())
+
 	bytes := buf.Bytes()
 	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
 }
