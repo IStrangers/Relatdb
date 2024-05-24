@@ -58,6 +58,8 @@ func (self *Executor) Execute() RecordSet {
 		return self.executeShowStatement(stmt)
 	case *ast.CreateTableStatement:
 		return self.executeCreateTableStatement(stmt)
+	case *ast.SelectStatement:
+		return self.executeSelectStatement(stmt)
 	default:
 		panic(fmt.Errorf("unsupported statement type: %T", stmt))
 	}
@@ -65,10 +67,17 @@ func (self *Executor) Execute() RecordSet {
 
 func (self *Executor) executeShowStatement(stmt *ast.ShowStatement) RecordSet {
 	keyWord := self.evalExpressionOrDefaultValue(stmt.KeyWord, "")
+	rows := make([][]meta.Value, 0)
 	switch stmt.Type {
-
+	case ast.ShowEngines:
+	case ast.ShowDatabases:
+		rows = append(rows, []meta.Value{meta.StringValue("default")})
+	case ast.ShowTables:
+		rows = append(rows, []meta.Value{meta.StringValue("test")})
+	case ast.ShowColumns:
+	case ast.ShowVariables:
 	}
-	return NewRecordSet(0, 0, []meta.Value{keyWord}, [][]meta.Value{})
+	return NewRecordSet(0, 0, []meta.Value{keyWord}, rows)
 }
 
 func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement) RecordSet {
@@ -95,4 +104,13 @@ func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement
 	store := self.ctx.GetStore()
 	store.CreateTable(table)
 	return NewRecordSet(0, 0, nil, nil)
+}
+
+func (self *Executor) executeSelectStatement(stmt *ast.SelectStatement) RecordSet {
+	columns := make([]meta.Value, len(stmt.Fields))
+	rows := make([][]meta.Value, 0)
+	for i, field := range stmt.Fields {
+		columns[i] = self.evalExpressionOrDefaultValue(field.AsName, self.evalExpression(field.Expr))
+	}
+	return NewRecordSet(0, 0, columns, rows)
 }

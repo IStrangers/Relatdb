@@ -265,10 +265,10 @@ func (self *Connection) handlingStmt(ctx *Context, stmt ast.Statement, isLastStm
 	rows := recordSet.GetRows()
 
 	if columns != nil && rows != nil {
-		selectPacket := NewSelectPacket(columns)
+		selectPacket := NewSelectPacket(columns, rows)
 		self.sendDataPacket(selectPacket)
 	}
-	self.sendOkPacket(byte(len(columns)+1), recordSet.GetAffectedRows(), recordSet.GetInsertId())
+	self.sendOkPacket(byte(len(columns)+len(rows)+1), recordSet.GetAffectedRows(), recordSet.GetInsertId())
 }
 
 func (self *Connection) handlingStmtPrepare() {

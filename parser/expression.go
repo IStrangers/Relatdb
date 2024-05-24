@@ -173,6 +173,11 @@ func (parser *Parser) parseLeftHandSideExpressionAllowCall(stopTokens []token.To
 				left = columnName.Name
 			}
 			left = parser.parseCallExpression(left)
+			if parser.scope.inSelectField {
+				identifier := left.(*ast.CallExpression).Callee.(*ast.Identifier)
+				identifier.Name += "()"
+				left = identifier
+			}
 			continue
 		}
 		break

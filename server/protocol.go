@@ -308,25 +308,62 @@ func (self *ColumnPacket) GetPacketBytes() []byte {
 	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
 }
 
+type RowPacket struct {
+	AbstractDataPacket
+	Values [][]byte
+}
+
+func (self *RowPacket) GetPacketBytes() []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(self.PacketId)
+	nullMark := byte(251)
+	for _, value := range self.Values {
+		length := uint64(len(value))
+		if value == nil || length == 0 {
+			buf.WriteByte(nullMark)
+		} else {
+			lengthEncodedInt(&buf, length)
+			buf.Write(value)
+		}
+	}
+	bytes := buf.Bytes()
+	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
+}
+
 type SelectPacket struct {
 	AbstractDataPacket
 	ColumnPackets []*ColumnPacket
+	RowPackets    []*RowPacket
 }
 
-func NewSelectPacket(columns []meta.Value) *SelectPacket {
-	packetId := 2
-	var columnPackets []*ColumnPacket
-	for _, column := range columns {
+func NewSelectPacket(columns []meta.Value, rows [][]meta.Value) *SelectPacket {
+	packetId := byte(2)
+	columnPackets := make([]*ColumnPacket, len(columns))
+	for i, column := range columns {
 		columnPacket := &ColumnPacket{
 			Name: column.ToString(),
 			Type: common.FIELD_TYPE_VAR_STRING,
 		}
-		columnPacket.PacketId = byte(packetId)
-		columnPackets = append(columnPackets, columnPacket)
+		columnPacket.PacketId = packetId
+		columnPackets[i] = columnPacket
+		packetId++
+	}
+	rowPackets := make([]*RowPacket, len(rows))
+	for i, row := range rows {
+		values := make([][]byte, len(row))
+		for j, value := range row {
+			values[j] = value.ToValueBytes()
+		}
+		rowPacket := &RowPacket{
+			Values: values,
+		}
+		rowPacket.PacketId = packetId
+		rowPackets[i] = rowPacket
 		packetId++
 	}
 	selectPacket := &SelectPacket{
 		ColumnPackets: columnPackets,
+		RowPackets:    rowPackets,
 	}
 	selectPacket.PacketId = 1
 	return selectPacket
@@ -343,10 +380,18 @@ func (self *SelectPacket) GetPacketBytes() []byte {
 		bytes := columnPacket.GetPacketBytes()
 		buf.Write(bytes)
 	}
-	columnsEofPacket := &EofPacket{}
+	columnsEofPacket := &EofPacket{
+		ServerStatus: 2,
+	}
 	buf.Write(columnsEofPacket.GetPacketBytes())
 
-	rowsEofPacket := &EofPacket{}
+	for _, rowPacket := range self.RowPackets {
+		bytes := rowPacket.GetPacketBytes()
+		buf.Write(bytes)
+	}
+	rowsEofPacket := &EofPacket{
+		ServerStatus: 2,
+	}
 	buf.Write(rowsEofPacket.GetPacketBytes())
 
 	bytes := buf.Bytes()

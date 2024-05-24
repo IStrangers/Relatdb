@@ -27,6 +27,7 @@ type Value interface {
 	ToInt() int
 	ToInt64() int64
 	ToBytes() []byte
+	ToValueBytes() []byte
 	GetLength() uint
 	Compare(Value) int
 }
@@ -61,6 +62,10 @@ func (self StringValue) ToBytes() []byte {
 	return buffer.Data
 }
 
+func (self StringValue) ToValueBytes() []byte {
+	return []byte(self)
+}
+
 func (self StringValue) GetLength() uint {
 	return 4 + 1 + uint(len(string(self)))
 }
@@ -90,6 +95,12 @@ func (self Int64Value) ToInt64() int64 {
 func (self Int64Value) ToBytes() []byte {
 	buffer := common.NewBufferBySize(self.GetLength())
 	buffer.WriteByte(byte(self.GetType()))
+	buffer.WriteInt64(int64(self))
+	return buffer.Data
+}
+
+func (self Int64Value) ToValueBytes() []byte {
+	buffer := common.NewBufferBySize(self.GetLength() - 1)
 	buffer.WriteInt64(int64(self))
 	return buffer.Data
 }
@@ -133,6 +144,12 @@ func (self IntValue) ToBytes() []byte {
 	return buffer.Data
 }
 
+func (self IntValue) ToValueBytes() []byte {
+	buffer := common.NewBufferBySize(self.GetLength() - 1)
+	buffer.WriteInt(int(self))
+	return buffer.Data
+}
+
 func (self IntValue) GetLength() uint {
 	return 4 + 1
 }
@@ -169,6 +186,10 @@ func (self NullValue) ToBytes() []byte {
 	buffer := common.NewBufferBySize(self.GetLength())
 	buffer.WriteByte(byte(self.GetType()))
 	return buffer.Data
+}
+
+func (self NullValue) ToValueBytes() []byte {
+	return []byte{}
 }
 
 func (self NullValue) GetLength() uint {
