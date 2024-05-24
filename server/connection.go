@@ -264,11 +264,12 @@ func (self *Connection) handlingStmt(ctx *Context, stmt ast.Statement, isLastStm
 	columns := recordSet.GetColumns()
 	rows := recordSet.GetRows()
 
-	if columns != nil && rows != nil {
+	if len(columns) != 0 || len(rows) != 0 {
 		selectPacket := NewSelectPacket(columns, rows)
 		self.sendDataPacket(selectPacket)
+		return
 	}
-	self.sendOkPacket(byte(len(columns)+len(rows)+1), recordSet.GetAffectedRows(), recordSet.GetInsertId())
+	self.sendOkPacket(0, recordSet.GetAffectedRows(), recordSet.GetInsertId())
 }
 
 func (self *Connection) handlingStmtPrepare() {

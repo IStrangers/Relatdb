@@ -17,6 +17,8 @@ func (self *Parser) parseStatement() ast.Statement {
 		return self.parseShowStatement()
 	case token.USE:
 		return self.parseUseStatement()
+	case token.SET:
+		return self.parseSetVariableStatement()
 	case token.CREATE:
 		return self.parseCreateStatement()
 	case token.DROP:
@@ -45,11 +47,12 @@ func (self *Parser) parseStatements() (statements []ast.Statement) {
 func (self *Parser) parseShowStatement() ast.Statement {
 	showIndex := self.expect(token.SHOW)
 	switch self.token {
-	case token.DATABASES, token.TABLES, token.VARIABLES:
+	case token.DATABASES, token.TABLES, token.VARIABLES, token.STATUS:
 		showType := map[token.Token]ast.ShowStatementType{
 			token.DATABASES: ast.ShowDatabases,
 			token.TABLES:    ast.ShowTables,
 			token.VARIABLES: ast.ShowVariables,
+			token.STATUS:    ast.ShowStatus,
 		}[self.token]
 		return &ast.ShowStatement{
 			ShowIndex: showIndex,
@@ -67,6 +70,15 @@ func (self *Parser) parseUseStatement() ast.Statement {
 	return &ast.UseStatement{
 		UseIndex: useIndex,
 		Database: self.parseIdentifier(),
+	}
+}
+
+func (self *Parser) parseSetVariableStatement() ast.Statement {
+	setIndex := self.expect(token.SET)
+	return &ast.SetVariableStatement{
+		SetIndex: setIndex,
+		Name:     self.parseIdentifier(),
+		Value:    self.parseExpression(),
 	}
 }
 

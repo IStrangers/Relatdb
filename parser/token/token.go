@@ -68,6 +68,7 @@ const (
 	DATABASES      // databases
 	TABLES         // tables
 	VARIABLES      // variables
+	STATUS         // status
 	USE            // use
 	IF             // if
 	NOT            // not
@@ -198,6 +199,7 @@ var tokenStringMap = [...]string{
 	DATABASES:      "databases",
 	TABLES:         "tables",
 	VARIABLES:      "variables",
+	STATUS:         "status",
 	USE:            "use",
 	IF:             "if",
 	NOT:            "not",
@@ -277,6 +279,7 @@ var keywordMap = map[string]Token{
 	"databases":      DATABASES,
 	"tables":         TABLES,
 	"variables":      VARIABLES,
+	"status":         STATUS,
 	"use":            USE,
 	"if":             IF,
 	"not":            NOT,

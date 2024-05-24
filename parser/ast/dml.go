@@ -145,6 +145,7 @@ const (
 	ShowTables
 	ShowColumns
 	ShowVariables
+	ShowStatus
 )
 
 type ShowStatement struct {

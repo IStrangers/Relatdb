@@ -56,6 +56,8 @@ func (self *Executor) Execute() RecordSet {
 	switch stmt := self.stmt.(type) {
 	case *ast.ShowStatement:
 		return self.executeShowStatement(stmt)
+	case *ast.SetVariableStatement:
+		return self.executeSetVariableStatement(stmt)
 	case *ast.CreateTableStatement:
 		return self.executeCreateTableStatement(stmt)
 	case *ast.SelectStatement:
@@ -78,6 +80,10 @@ func (self *Executor) executeShowStatement(stmt *ast.ShowStatement) RecordSet {
 	case ast.ShowVariables:
 	}
 	return NewRecordSet(0, 0, []meta.Value{keyWord}, rows)
+}
+
+func (self *Executor) executeSetVariableStatement(stmt *ast.SetVariableStatement) RecordSet {
+	return NewRecordSet(0, 0, []meta.Value{}, [][]meta.Value{})
 }
 
 func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement) RecordSet {
