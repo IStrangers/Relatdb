@@ -68,18 +68,31 @@ func (self *Executor) Execute() RecordSet {
 }
 
 func (self *Executor) executeShowStatement(stmt *ast.ShowStatement) RecordSet {
-	keyWord := self.evalExpressionOrDefaultValue(stmt.KeyWord, "")
+	columns := make([]meta.Value, 0)
 	rows := make([][]meta.Value, 0)
 	switch stmt.Type {
 	case ast.ShowEngines:
+		columns = []meta.Value{
+			meta.StringValue("Engine"), meta.StringValue("Support"), meta.StringValue("Comment"),
+			meta.StringValue("Transactions"), meta.StringValue("XA"), meta.StringValue("Savepoints"),
+		}
 	case ast.ShowDatabases:
+		columns = []meta.Value{meta.StringValue("Database")}
 		rows = append(rows, []meta.Value{meta.StringValue("default")})
 	case ast.ShowTables:
+		columns = []meta.Value{meta.StringValue("Tables_in_")}
 		rows = append(rows, []meta.Value{meta.StringValue("test")})
 	case ast.ShowColumns:
+		columns = []meta.Value{
+			meta.StringValue("Field"), meta.StringValue("Type"), meta.StringValue("Null"),
+			meta.StringValue("Key"), meta.StringValue("Default"), meta.StringValue("Extra"),
+		}
 	case ast.ShowVariables:
+		columns = []meta.Value{meta.StringValue("Variable_name"), meta.StringValue("Value")}
+	case ast.ShowStatus:
+		columns = []meta.Value{meta.StringValue("Variable_name"), meta.StringValue("Value")}
 	}
-	return NewRecordSet(0, 0, []meta.Value{keyWord}, rows)
+	return NewRecordSet(0, 0, columns, rows)
 }
 
 func (self *Executor) executeSetVariableStatement(stmt *ast.SetVariableStatement) RecordSet {

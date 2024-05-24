@@ -247,6 +247,7 @@ func (self *Connection) handlingQuery(querySql string) {
 			log.Printf("handling sql error: sql=%s, err=%v\n", querySql, err)
 		}
 	}()
+	log.Printf("handling query: sql=%s", querySql)
 	parser := parser.CreateParser(1, querySql, true, true)
 	stmts := parser.Parse()
 	stmtLength := len(stmts)
