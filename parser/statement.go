@@ -47,10 +47,9 @@ func (self *Parser) parseStatements() (statements []ast.Statement) {
 func (self *Parser) parseShowStatement() ast.Statement {
 	showIndex := self.expect(token.SHOW)
 	switch self.token {
-	case token.DATABASES, token.TABLES, token.VARIABLES, token.STATUS:
+	case token.DATABASES, token.VARIABLES, token.STATUS:
 		showType := map[token.Token]ast.ShowStatementType{
 			token.DATABASES: ast.ShowDatabases,
-			token.TABLES:    ast.ShowTables,
 			token.VARIABLES: ast.ShowVariables,
 			token.STATUS:    ast.ShowStatus,
 		}[self.token]
@@ -59,6 +58,15 @@ func (self *Parser) parseShowStatement() ast.Statement {
 			Type:      showType,
 			KeyWord:   self.parseKeyWordIdentifier(self.token),
 		}
+	case token.TABLES:
+		showStatement := &ast.ShowStatement{
+			ShowIndex: showIndex,
+			Type:      ast.ShowTables,
+			KeyWord:   self.parseKeyWordIdentifier(self.token),
+		}
+		self.expectToken(token.FROM)
+		showStatement.TableName = self.parseTableName()
+		return showStatement
 	default:
 		self.errorUnexpectedToken(self.token)
 		return nil

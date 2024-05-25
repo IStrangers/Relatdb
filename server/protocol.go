@@ -14,7 +14,7 @@ var (
 	OK_HEADER      byte = 0x00
 	ERR_HEADER     byte = 0xff
 	EOFHeader      byte = 0xfe
-	CatalogVal          = "def"
+	CATALOG_VAL         = "def"
 )
 
 type DataPacket interface {
@@ -243,6 +243,16 @@ type EofPacket struct {
 	ServerStatus uint16
 }
 
+func NewEofPacket(packetId byte, warningCount uint16, serverStatus uint16) *EofPacket {
+	eofPacket := &EofPacket{
+		EofHeader:    EOFHeader,
+		WarningCount: warningCount,
+		ServerStatus: serverStatus,
+	}
+	eofPacket.PacketId = packetId
+	return eofPacket
+}
+
 func (self *EofPacket) GetPacketBytes() []byte {
 	var buf bytes.Buffer
 	buf.WriteByte(self.PacketId)
@@ -288,6 +298,11 @@ func (self *ColumnPacket) GetPacketBytes() []byte {
 	} else {
 		lengthEncodedString(&buf, self.OrgTable)
 	}
+	if self.Name == "" {
+		buf.WriteByte(0)
+	} else {
+		lengthEncodedString(&buf, self.Name)
+	}
 	if self.OrgName == "" {
 		buf.WriteByte(0)
 	} else {
@@ -296,7 +311,7 @@ func (self *ColumnPacket) GetPacketBytes() []byte {
 	buf.WriteByte(0x0c)
 	binary.Write(&buf, binary.LittleEndian, self.Charset)
 	binary.Write(&buf, binary.LittleEndian, self.Length)
-	binary.Write(&buf, binary.LittleEndian, self.Type)
+	buf.WriteByte(byte(self.Type))
 	binary.Write(&buf, binary.LittleEndian, self.Flag)
 	buf.WriteByte(self.Decimals)
 	filler := []byte{0, 0}
@@ -330,24 +345,29 @@ func (self *RowPacket) GetPacketBytes() []byte {
 	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
 }
 
-type SelectPacket struct {
+type TablePacket struct {
 	AbstractDataPacket
-	ColumnPackets []*ColumnPacket
-	RowPackets    []*RowPacket
+	ColumnPackets    []*ColumnPacket
+	ColumnsEofPacket *EofPacket
+	RowPackets       []*RowPacket
+	RowsEofPacket    *EofPacket
 }
 
-func NewSelectPacket(columns []meta.Value, rows [][]meta.Value) *SelectPacket {
+func NewTablePacket(columns []meta.Value, rows [][]meta.Value) *TablePacket {
 	packetId := byte(2)
 	columnPackets := make([]*ColumnPacket, len(columns))
 	for i, column := range columns {
 		columnPacket := &ColumnPacket{
-			Name: column.ToString(),
-			Type: common.FIELD_TYPE_VAR_STRING,
+			Catalog: CATALOG_VAL,
+			Name:    column.ToString(),
+			Type:    common.FIELD_TYPE_VAR_STRING,
 		}
 		columnPacket.PacketId = packetId
 		columnPackets[i] = columnPacket
 		packetId++
 	}
+	columnsEofPacket := NewEofPacket(packetId, 0, 2)
+	packetId++
 	rowPackets := make([]*RowPacket, len(rows))
 	for i, row := range rows {
 		values := make([][]byte, len(row))
@@ -361,15 +381,18 @@ func NewSelectPacket(columns []meta.Value, rows [][]meta.Value) *SelectPacket {
 		rowPackets[i] = rowPacket
 		packetId++
 	}
-	selectPacket := &SelectPacket{
-		ColumnPackets: columnPackets,
-		RowPackets:    rowPackets,
+	rowsEofPacket := NewEofPacket(packetId, 0, 2)
+	selectPacket := &TablePacket{
+		ColumnPackets:    columnPackets,
+		ColumnsEofPacket: columnsEofPacket,
+		RowPackets:       rowPackets,
+		RowsEofPacket:    rowsEofPacket,
 	}
 	selectPacket.PacketId = 1
 	return selectPacket
 }
 
-func (self *SelectPacket) GetPacketBytes() []byte {
+func (self *TablePacket) GetPacketBytes() []byte {
 	var buf bytes.Buffer
 	columnCount := uint64(len(self.ColumnPackets))
 	buf.Write(getDataLengthBytes(uint32(getIntLength(columnCount))))
@@ -380,20 +403,14 @@ func (self *SelectPacket) GetPacketBytes() []byte {
 		bytes := columnPacket.GetPacketBytes()
 		buf.Write(bytes)
 	}
-	columnsEofPacket := &EofPacket{
-		ServerStatus: 2,
-	}
-	buf.Write(columnsEofPacket.GetPacketBytes())
+	buf.Write(self.ColumnsEofPacket.GetPacketBytes())
 
 	for _, rowPacket := range self.RowPackets {
 		bytes := rowPacket.GetPacketBytes()
 		buf.Write(bytes)
 	}
-	rowsEofPacket := &EofPacket{
-		ServerStatus: 2,
-	}
-	buf.Write(rowsEofPacket.GetPacketBytes())
+	buf.Write(self.RowsEofPacket.GetPacketBytes())
 
 	bytes := buf.Bytes()
-	return append(getDataLengthBytes(uint32(len(bytes))-1), bytes...)
+	return bytes
 }

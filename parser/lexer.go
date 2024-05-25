@@ -250,7 +250,7 @@ func isNumericPart(chr rune) bool {
 }
 
 func isStringSymbol(chr rune) bool {
-	return chr == '"' || chr == '\''
+	return chr == '"' || chr == '\'' || chr == '`'
 }
 func isNotStringSymbol(chr rune) bool {
 	return !isStringSymbol(chr)

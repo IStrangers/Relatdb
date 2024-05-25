@@ -266,7 +266,7 @@ func (self *Connection) handlingStmt(ctx *Context, stmt ast.Statement, isLastStm
 	rows := recordSet.GetRows()
 
 	if len(columns) != 0 || len(rows) != 0 {
-		selectPacket := NewSelectPacket(columns, rows)
+		selectPacket := NewTablePacket(columns, rows)
 		self.sendDataPacket(selectPacket)
 		return
 	}

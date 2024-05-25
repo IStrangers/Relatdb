@@ -286,6 +286,15 @@ func (self *Parser) parseIdentifier() *ast.Identifier {
 	}
 }
 
+func (self *Parser) parseStringLiteralOrIdentifier() ast.Expression {
+	switch self.token {
+	case token.STRING:
+		return self.parseStringLiteral()
+	default:
+		return self.parseIdentifier()
+	}
+}
+
 func (self *Parser) parseKeyWordIdentifier(keyword token.Token) *ast.Identifier {
 	defer self.expectToken(keyword)
 	return &ast.Identifier{
@@ -334,11 +343,11 @@ func (self *Parser) parseArguments() (leftParenthesis uint64, arguments []ast.Ex
 
 func (self *Parser) parseTableName() *ast.TableName {
 	tableName := &ast.TableName{
-		Name: self.parseIdentifier(),
+		Name: self.parseStringLiteralOrIdentifier(),
 	}
 	if self.expectEqualsToken(token.DOT) {
 		tableName.Schema = tableName.Name
-		tableName.Name = self.parseIdentifier()
+		tableName.Name = self.parseStringLiteralOrIdentifier()
 	}
 	return tableName
 }
@@ -356,16 +365,16 @@ func (self *Parser) parseTableNames() (names []*ast.TableName) {
 
 func (self *Parser) parseColumnName() *ast.ColumnName {
 	columnName := &ast.ColumnName{
-		Name: self.parseIdentifier(),
+		Name: self.parseStringLiteralOrIdentifier(),
 	}
 	if self.expectEqualsToken(token.DOT) {
 		columnName.Table = columnName.Name
-		columnName.Name = self.parseIdentifier()
+		columnName.Name = self.parseStringLiteralOrIdentifier()
 	}
 	if self.expectEqualsToken(token.DOT) {
 		columnName.Schema = columnName.Table
 		columnName.Table = columnName.Name
-		columnName.Name = self.parseIdentifier()
+		columnName.Name = self.parseStringLiteralOrIdentifier()
 	}
 	return columnName
 }

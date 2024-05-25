@@ -154,6 +154,7 @@ type ShowStatement struct {
 	ShowIndex uint64
 	Type      ShowStatementType
 	KeyWord   *Identifier
+	TableName *TableName
 }
 
 func (self *ShowStatement) StartIndex() uint64 {
