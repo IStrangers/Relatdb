@@ -14,7 +14,7 @@ func main() {
 	})
 	server := server.NewServer(&server.Options{
 		BindIp:   "localhost",
-		BindPort: 3307,
+		BindPort: 3306,
 	}, store)
 	server.Start()
 }

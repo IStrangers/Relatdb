@@ -155,6 +155,7 @@ type ShowStatement struct {
 	Type      ShowStatementType
 	KeyWord   *Identifier
 	TableName *TableName
+	Where     Expression
 }
 
 func (self *ShowStatement) StartIndex() uint64 {

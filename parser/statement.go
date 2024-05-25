@@ -47,10 +47,9 @@ func (self *Parser) parseStatements() (statements []ast.Statement) {
 func (self *Parser) parseShowStatement() ast.Statement {
 	showIndex := self.expect(token.SHOW)
 	switch self.token {
-	case token.DATABASES, token.VARIABLES, token.STATUS:
+	case token.DATABASES, token.STATUS:
 		showType := map[token.Token]ast.ShowStatementType{
 			token.DATABASES: ast.ShowDatabases,
-			token.VARIABLES: ast.ShowVariables,
 			token.STATUS:    ast.ShowStatus,
 		}[self.token]
 		return &ast.ShowStatement{
@@ -58,6 +57,15 @@ func (self *Parser) parseShowStatement() ast.Statement {
 			Type:      showType,
 			KeyWord:   self.parseKeyWordIdentifier(self.token),
 		}
+	case token.VARIABLES:
+		showStatement := &ast.ShowStatement{
+			ShowIndex: showIndex,
+			Type:      ast.ShowVariables,
+			KeyWord:   self.parseKeyWordIdentifier(self.token),
+		}
+		self.expectToken(token.LIKE)
+		showStatement.Where = self.parseExpression()
+		return showStatement
 	case token.TABLES:
 		showStatement := &ast.ShowStatement{
 			ShowIndex: showIndex,
