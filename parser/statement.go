@@ -92,11 +92,13 @@ func (self *Parser) parseUseStatement() ast.Statement {
 
 func (self *Parser) parseSetVariableStatement() ast.Statement {
 	setIndex := self.expect(token.SET)
-	return &ast.SetVariableStatement{
+	setVariableStatement := &ast.SetVariableStatement{
 		SetIndex: setIndex,
 		Name:     self.parseIdentifier(),
-		Value:    self.parseExpression(),
 	}
+	self.expectEqualsToken(token.ASSIGN)
+	setVariableStatement.Value = self.parseExpression()
+	return setVariableStatement
 }
 
 func (self *Parser) parseCreateStatement() ast.Statement {
