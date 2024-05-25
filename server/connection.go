@@ -18,6 +18,7 @@ type Connection struct {
 	conn   net.Conn
 	reader *bufio.Reader
 	writer *bufio.Writer
+	closed bool
 
 	authPluginDataPart []byte
 	clientCapabilities uint32
@@ -171,7 +172,7 @@ func (self *Connection) writeAuthOK() {
 }
 
 func (self *Connection) receiveCommandHandler() {
-	for {
+	for !self.closed {
 		binaryPacket := self.receiveBinaryPacket()
 		if binaryPacket == nil {
 			continue
@@ -225,10 +226,12 @@ func (self *Connection) heartbeat() {
 }
 
 func (self *Connection) close() {
+	self.server.removeConn(self.connId)
 	err := self.conn.Close()
 	if err != nil {
 		log.Println("conn close error:", err)
 	}
+	self.closed = true
 }
 
 func (self *Connection) kill() {

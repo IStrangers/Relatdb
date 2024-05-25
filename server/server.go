@@ -97,6 +97,10 @@ func (self *Server) registerConn(conn *Connection) {
 	self.connMap[conn.connId] = conn
 }
 
+func (self *Server) removeConn(connId uint64) {
+	self.connMap[connId] = nil
+}
+
 func (self *Server) onConn(conn *Connection) {
 	conn.sendHandshakePacket()
 	if !conn.authentication() {
