@@ -63,8 +63,9 @@ func (self *Parser) parseShowStatement() ast.Statement {
 			Type:      ast.ShowVariables,
 			KeyWord:   self.parseKeyWordIdentifier(self.token),
 		}
-		self.expectToken(token.LIKE)
-		showStatement.Where = self.parseExpression()
+		if self.expectEqualsToken(token.LIKE) {
+			showStatement.Where = self.parseExpression()
+		}
 		return showStatement
 	case token.TABLES:
 		showStatement := &ast.ShowStatement{
