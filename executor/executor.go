@@ -2,23 +2,19 @@ package executor
 
 import (
 	"Relatdb/common"
+	"Relatdb/executor/context"
 	"Relatdb/index/bptree"
 	"Relatdb/meta"
 	"Relatdb/parser/ast"
-	"Relatdb/store"
 	"fmt"
 )
 
-type ExecuteContext interface {
-	GetStore() store.Store
-}
-
 type Executor struct {
-	ctx  ExecuteContext
+	ctx  context.ExecuteContext
 	stmt ast.Statement
 }
 
-func NewExecutor(ctx ExecuteContext, stmt ast.Statement) *Executor {
+func NewExecutor(ctx context.ExecuteContext, stmt ast.Statement) *Executor {
 	return &Executor{
 		ctx:  ctx,
 		stmt: stmt,
@@ -60,6 +56,8 @@ func (self *Executor) Execute() RecordSet {
 		return self.executeSetVariableStatement(stmt)
 	case *ast.CreateTableStatement:
 		return self.executeCreateTableStatement(stmt)
+	case *ast.DropTableStatement:
+		return self.executeDropTableStatement(stmt)
 	case *ast.SelectStatement:
 		return self.executeSelectStatement(stmt)
 	default:
@@ -119,9 +117,19 @@ func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement
 		fields[i] = field
 		fieldMap[field.Name] = field.Index
 	}
-	table := meta.NewTable(self.evalExpression(stmt.Name).ToString(), fields, primaryFiled, fieldMap, clusterIndex, secondaryIndexes)
+	connection := self.ctx.GetConnection()
+	table := meta.NewTable(connection.GetDatabase(), self.evalExpression(stmt.Name).ToString(), fields, primaryFiled, fieldMap, clusterIndex, secondaryIndexes)
 	store := self.ctx.GetStore()
 	store.CreateTable(table)
+	return NewRecordSet(0, 0, nil, nil)
+}
+
+func (self *Executor) executeDropTableStatement(stmt *ast.DropTableStatement) RecordSet {
+	connection := self.ctx.GetConnection()
+	store := self.ctx.GetStore()
+	for _, name := range stmt.Names {
+		store.DropTable(connection.GetDatabase(), self.evalExpression(name.Name).ToString())
+	}
 	return NewRecordSet(0, 0, nil, nil)
 }
 

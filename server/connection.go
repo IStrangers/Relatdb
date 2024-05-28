@@ -36,6 +36,10 @@ func NewConnection(server *Server, conn net.Conn) *Connection {
 	}
 }
 
+func (self *Connection) GetDatabase() string {
+	return self.database
+}
+
 func (self *Connection) read(bytes []byte) []byte {
 	_, err := self.reader.Read(bytes)
 	if err != nil {
@@ -134,6 +138,10 @@ func (self *Connection) authentication() bool {
 	}
 	self.clientCapabilities = authPacket.ClientFlags
 	self.userName = authPacket.UserName
+	self.database = authPacket.DataBase
+	if self.database == "" {
+		self.database = "default"
+	}
 	self.writeAuthOK()
 	return true
 }
@@ -247,7 +255,8 @@ func (self *Connection) handlingQuery(querySql string) {
 	defer func() {
 		err := recover()
 		if err != nil {
-			log.Printf("handling sql error: sql=%s, err=%v\n", querySql, err)
+			errorMsg := fmt.Sprintf("handling sql error: sql=%s, err=%v\n", querySql, err)
+			log.Printf(errorMsg)
 		}
 	}()
 	log.Printf("handling query: sql=%s", querySql)

@@ -1,6 +1,7 @@
 package icna
 
 import (
+	"Relatdb/common"
 	"Relatdb/index/bptree"
 	"Relatdb/meta"
 	"Relatdb/store"
@@ -19,20 +20,29 @@ type Options struct {
 }
 
 type IcnaStore struct {
-	path     string
-	tableMap map[string]*meta.Table
+	path        string
+	databaseMap map[string]*meta.DataBase
 }
 
 func NewIcnaStore(options *Options) *IcnaStore {
 	store := &IcnaStore{
-		path:     options.Path,
-		tableMap: make(map[string]*meta.Table),
+		path:        options.Path,
+		databaseMap: make(map[string]*meta.DataBase),
 	}
 	_ = os.MkdirAll(store.path, os.ModePerm)
 	return store
 }
 
 func (self *IcnaStore) Init() {
+	self.InitDatabases()
+	self.InitTables()
+}
+
+func (self *IcnaStore) InitDatabases() {
+	self.databaseMap["default"] = meta.NewDataBase("default")
+}
+
+func (self *IcnaStore) InitTables() {
 	metaDir, _ := os.ReadDir(self.path)
 	for _, entry := range metaDir {
 		fileName := entry.Name()
@@ -40,7 +50,8 @@ func (self *IcnaStore) Init() {
 			continue
 		}
 		table := self.readTable(utils.ConcatFilePaths(self.path, fileName))
-		self.tableMap[table.Name] = table
+		database := self.databaseMap[table.DatabaseName]
+		database.TableMap[table.Name] = table
 	}
 }
 
@@ -53,11 +64,19 @@ func (self *IcnaStore) readTable(path string) *meta.Table {
 		entries = append(entries, store.ItemToIndexEntry(item))
 	}
 	metaQuantity := entries[0].GetValues()[0].ToInt()
-	tableName := entries[1].GetValues()[0].ToString()
+	databaseName := entries[1].GetValues()[0].ToString()
+	tableName := entries[2].GetValues()[0].ToString()
 	var fields []*meta.Field
-	for i := 2; i <= metaQuantity; i++ {
+	var primaryFiled *meta.Field
+	fieldMap := make(map[string]uint, metaQuantity-3)
+	for i := 3; i <= metaQuantity; i++ {
 		values := entries[i].GetValues()
-		fields = append(fields, meta.NewFieldByValues(values))
+		field := meta.NewFieldByValues(values)
+		if field.Flag&common.PRIMARY_KEY_FLAG != 0 {
+			primaryFiled = field
+		}
+		fields = append(fields, field)
+		fieldMap[field.Name] = field.Index
 	}
 	var clusterIndex meta.Index
 	var secondaryIndexes []meta.Index
@@ -80,15 +99,10 @@ func (self *IcnaStore) readTable(path string) *meta.Table {
 		}
 		indexStartOffset += indexMetaSize + 1
 	}
-	return &meta.Table{
-		MetaPath:         path,
-		DataPath:         strings.ReplaceAll(path, META_SUFFIX, DATA_SUFFIX),
-		Name:             tableName,
-		Fields:           fields,
-		ClusterIndex:     clusterIndex,
-		SecondaryIndexes: secondaryIndexes,
-	}
-
+	table := meta.NewTable(databaseName, tableName, fields, primaryFiled, fieldMap, clusterIndex, secondaryIndexes)
+	table.MetaPath = path
+	table.DataPath = strings.ReplaceAll(path, META_SUFFIX, DATA_SUFFIX)
+	return table
 }
 
 func (self *IcnaStore) writeTable(table *meta.Table) {
@@ -99,10 +113,12 @@ func (self *IcnaStore) writeTable(table *meta.Table) {
 	for _, field := range table.Fields {
 		fields = append(fields, store.IndexEntryToItem(meta.NewIndexEntry(meta.FieldToValues(field), nil)))
 	}
-	metaQuantity := store.IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(fields) + 1)}, nil))
+	metaQuantity := store.IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.IntValue(len(fields) + 2)}, nil))
+	databaseName := store.IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.StringValue(table.DatabaseName)}, nil))
 	tableName := store.IndexEntryToItem(meta.NewIndexEntry([]meta.Value{meta.StringValue(table.Name)}, nil))
 	page := store.NewPage()
 	page.WriteItem(metaQuantity)
+	page.WriteItem(databaseName)
 	page.WriteItem(tableName)
 	page.WriteItem(fields...)
 	//写入索引
@@ -116,8 +132,20 @@ func (self *IcnaStore) writeTable(table *meta.Table) {
 	pageStore.WritePage(page, 0)
 }
 
+func (self *IcnaStore) getDatabase(databaseName string) *meta.DataBase {
+	if databaseName == "" {
+		panic("no database selected")
+	}
+	database := self.databaseMap[databaseName]
+	if database == nil {
+		panic("database not exists: " + databaseName)
+	}
+	return database
+}
+
 func (self *IcnaStore) CreateTable(table *meta.Table) {
-	if self.tableMap[table.Name] != nil {
+	database := self.getDatabase(table.DatabaseName)
+	if database.TableMap[table.Name] != nil {
 		panic("table already exists: " + table.Name)
 	}
 	if table.ClusterIndex == nil {
@@ -127,5 +155,16 @@ func (self *IcnaStore) CreateTable(table *meta.Table) {
 	table.DataPath = utils.ConcatFilePaths(self.path, table.Name+DATA_SUFFIX)
 	self.writeTable(table)
 
-	self.tableMap[table.Name] = table
+	database.TableMap[table.Name] = table
+}
+
+func (self *IcnaStore) DropTable(databaseName string, tableName string) {
+	database := self.getDatabase(databaseName)
+	table := database.TableMap[tableName]
+	if table == nil {
+		panic("table not exists: " + tableName)
+	}
+	os.Remove(table.DataPath)
+	os.Remove(table.MetaPath)
+	delete(database.TableMap, tableName)
 }

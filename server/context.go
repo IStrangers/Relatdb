@@ -2,6 +2,7 @@ package server
 
 import (
 	"Relatdb/executor"
+	"Relatdb/executor/context"
 	"Relatdb/parser/ast"
 	"Relatdb/store"
 )
@@ -9,6 +10,10 @@ import (
 type Context struct {
 	conn    *Connection
 	session *Session
+}
+
+func (self *Context) GetConnection() context.Connection {
+	return self.conn
 }
 
 func (self *Context) GetStore() store.Store {
