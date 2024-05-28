@@ -86,7 +86,7 @@ func (self *Parser) parseUseStatement() ast.Statement {
 	useIndex := self.expect(token.USE)
 	return &ast.UseStatement{
 		UseIndex: useIndex,
-		Database: self.parseIdentifier(),
+		Database: self.parseStringLiteralOrIdentifier(),
 	}
 }
 

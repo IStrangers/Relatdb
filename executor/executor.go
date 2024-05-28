@@ -50,6 +50,8 @@ func (self *Executor) evalExpression(expr ast.Expression) meta.Value {
 
 func (self *Executor) Execute() RecordSet {
 	switch stmt := self.stmt.(type) {
+	case *ast.UseStatement:
+		return self.executeUseStatement(stmt)
 	case *ast.ShowStatement:
 		return self.executeShowStatement(stmt)
 	case *ast.SetVariableStatement:
@@ -63,6 +65,12 @@ func (self *Executor) Execute() RecordSet {
 	default:
 		panic(fmt.Errorf("unsupported statement type: %T", stmt))
 	}
+}
+
+func (self *Executor) executeUseStatement(stmt *ast.UseStatement) RecordSet {
+	connection := self.ctx.GetConnection()
+	connection.SetDatabase(self.evalExpression(stmt.Database).ToString())
+	return NewRecordSet(0, 0, []meta.Value{}, [][]meta.Value{})
 }
 
 func (self *Executor) executeShowStatement(stmt *ast.ShowStatement) RecordSet {

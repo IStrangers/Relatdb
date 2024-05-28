@@ -4,7 +4,7 @@ type UseStatement struct {
 	_Statement_
 
 	UseIndex uint64
-	Database *Identifier
+	Database Expression
 }
 
 func (self *UseStatement) StartIndex() uint64 {

@@ -1,9 +1,12 @@
 package context
 
-import "Relatdb/store"
+import (
+	"Relatdb/store"
+)
 
 type Connection interface {
 	GetDatabase() string
+	SetDatabase(database string)
 }
 
 type ExecuteContext interface {

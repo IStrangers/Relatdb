@@ -40,6 +40,10 @@ func (self *Connection) GetDatabase() string {
 	return self.database
 }
 
+func (self *Connection) SetDatabase(database string) {
+	self.database = database
+}
+
 func (self *Connection) read(bytes []byte) []byte {
 	_, err := self.reader.Read(bytes)
 	if err != nil {
