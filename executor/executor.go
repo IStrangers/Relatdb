@@ -33,16 +33,22 @@ func (self *Executor) evalExpression(expr ast.Expression) meta.Value {
 	case *ast.TableName:
 		return self.evalExpression(expr.Name)
 	case *ast.Identifier:
-		return meta.ToValue(expr.Name)
+		return meta.StringValue(expr.Name)
 	case *ast.StringLiteral:
-		return meta.ToValue(expr.Value)
+		return meta.StringValue(expr.Value)
 	case *ast.NumberLiteral:
 		return meta.ToValue(expr.Value)
 	case *ast.BooleanLiteral:
 		if expr.Value {
-			return meta.ToValue(1)
+			return meta.IntValue(1)
 		}
-		return meta.ToValue(0)
+		return meta.IntValue(0)
+	case *ast.VariableName:
+		variableName := self.evalExpression(expr.Name).ToString()
+		return meta.StringValue(self.ctx.GetSession().GetVariable(variableName))
+	case *ast.VariableRef:
+		variableName := self.evalExpression(expr.Name).ToString()
+		return meta.StringValue(self.ctx.GetSession().GetVariable(variableName))
 	default:
 		panic(fmt.Errorf("unsupported expression type: %T", expr))
 	}
@@ -102,6 +108,10 @@ func (self *Executor) executeShowStatement(stmt *ast.ShowStatement) RecordSet {
 }
 
 func (self *Executor) executeSetVariableStatement(stmt *ast.SetVariableStatement) RecordSet {
+	session := self.ctx.GetSession()
+	name := self.evalExpression(stmt.Name).ToString()
+	value := self.evalExpression(stmt.Value).ToString()
+	session.SetVariable(name, value)
 	return NewRecordSet(0, 0, []meta.Value{}, [][]meta.Value{})
 }
 
@@ -144,8 +154,11 @@ func (self *Executor) executeDropTableStatement(stmt *ast.DropTableStatement) Re
 func (self *Executor) executeSelectStatement(stmt *ast.SelectStatement) RecordSet {
 	columns := make([]meta.Value, len(stmt.Fields))
 	rows := make([][]meta.Value, 0)
+	row := make([]meta.Value, len(stmt.Fields))
 	for i, field := range stmt.Fields {
 		columns[i] = self.evalExpressionOrDefaultValue(field.AsName, self.evalExpression(field.Expr))
+		row[i] = columns[i]
 	}
+	rows = append(rows, row)
 	return NewRecordSet(0, 0, columns, rows)
 }

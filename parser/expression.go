@@ -307,14 +307,14 @@ func (self *Parser) parseVariableRef(atIndex uint64) *ast.VariableRef {
 	self.expectToken(token.AT_IDENTIFIER)
 	return &ast.VariableRef{
 		AtIndex: atIndex,
-		Name:    self.parseIdentifier(),
+		Name:    self.parseStringLiteralOrIdentifier(),
 	}
 }
 
 func (self *Parser) parseVariableName(atIndex uint64) *ast.VariableName {
 	return &ast.VariableName{
 		AtIndex: atIndex,
-		Name:    self.parseIdentifier(),
+		Name:    self.parseStringLiteralOrIdentifier(),
 	}
 }
 

@@ -24,6 +24,7 @@ type Connection struct {
 	clientCapabilities uint32
 	userName           string
 	database           string
+	session            *Session
 }
 
 func NewConnection(server *Server, conn net.Conn) *Connection {
@@ -146,6 +147,7 @@ func (self *Connection) authentication() bool {
 	if self.database == "" {
 		self.database = "default"
 	}
+	self.session = NewSession()
 	self.writeAuthOK()
 	return true
 }

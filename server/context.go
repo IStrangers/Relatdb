@@ -16,6 +16,10 @@ func (self *Context) GetConnection() context.Connection {
 	return self.conn
 }
 
+func (self *Context) GetSession() context.Session {
+	return self.session
+}
+
 func (self *Context) GetStore() store.Store {
 	return self.conn.server.store
 }
@@ -23,7 +27,7 @@ func (self *Context) GetStore() store.Store {
 func NewContext(conn *Connection) *Context {
 	return &Context{
 		conn:    conn,
-		session: NewSession(),
+		session: conn.session,
 	}
 }
 

@@ -74,7 +74,7 @@ type VariableName struct {
 	_Expression_
 
 	AtIndex uint64
-	Name    *Identifier
+	Name    Expression
 }
 
 func (self *VariableName) StartIndex() uint64 {
@@ -89,7 +89,7 @@ type VariableRef struct {
 	_Expression_
 
 	AtIndex uint64
-	Name    *Identifier
+	Name    Expression
 }
 
 func (self *VariableRef) StartIndex() uint64 {
