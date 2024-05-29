@@ -9,15 +9,22 @@ type IndexDesc struct {
 }
 
 func NewIndexDesc(fields []*Field) *IndexDesc {
-	desc := &IndexDesc{
-		Fields: make([]*Field, 0),
-	}
-	desc.FieldMap = make(map[string]*Field, len(fields))
+	var primaryFiled *Field
+	fieldMap := make(map[string]*Field, len(fields))
 	for _, field := range fields {
-		desc.FieldMap[field.Name] = field
+		fieldMap[field.Name] = field
 		if field.Flag&common.PRIMARY_KEY_FLAG != 0 {
-			desc.PrimaryFiled = field
+			primaryFiled = field
 		}
+	}
+	return NewIndexDescByAllArgs(fields, primaryFiled, fieldMap)
+}
+
+func NewIndexDescByAllArgs(fields []*Field, primaryFiled *Field, fieldMap map[string]*Field) *IndexDesc {
+	desc := &IndexDesc{
+		Fields:       fields,
+		PrimaryFiled: primaryFiled,
+		FieldMap:     fieldMap,
 	}
 	return desc
 }

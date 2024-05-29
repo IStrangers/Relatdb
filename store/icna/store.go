@@ -68,7 +68,7 @@ func (self *IcnaStore) readTable(path string) *meta.Table {
 	tableName := entries[2].GetValues()[0].ToString()
 	var fields []*meta.Field
 	var primaryFiled *meta.Field
-	fieldMap := make(map[string]uint, metaQuantity-3)
+	fieldMap := make(map[string]*meta.Field, metaQuantity-3)
 	for i := 3; i <= metaQuantity; i++ {
 		values := entries[i].GetValues()
 		field := meta.NewFieldByValues(values)
@@ -76,7 +76,7 @@ func (self *IcnaStore) readTable(path string) *meta.Table {
 			primaryFiled = field
 		}
 		fields = append(fields, field)
-		fieldMap[field.Name] = field.Index
+		fieldMap[field.Name] = field
 	}
 	var clusterIndex meta.Index
 	var secondaryIndexes []meta.Index
@@ -132,17 +132,6 @@ func (self *IcnaStore) writeTable(table *meta.Table) {
 	pageStore.WritePage(page, 0)
 }
 
-func (self *IcnaStore) getDatabase(databaseName string) *meta.DataBase {
-	if databaseName == "" {
-		panic("no database selected")
-	}
-	database := self.databaseMap[databaseName]
-	if database == nil {
-		panic("database not exists: " + databaseName)
-	}
-	return database
-}
-
 func (self *IcnaStore) CreateDatabase(database *meta.DataBase) {
 	self.databaseMap[database.Name] = database
 }
@@ -155,9 +144,20 @@ func (self *IcnaStore) DropDatabase(databaseName string) {
 	delete(self.databaseMap, database.Name)
 }
 
+func (self *IcnaStore) GetDatabase(databaseName string) *meta.DataBase {
+	if databaseName == "" {
+		panic("no database selected")
+	}
+	database := self.databaseMap[databaseName]
+	if database == nil {
+		panic("database not exists: " + databaseName)
+	}
+	return database
+}
+
 func (self *IcnaStore) CreateTable(table *meta.Table) {
-	database := self.getDatabase(table.DatabaseName)
-	if database.TableMap[table.Name] != nil {
+	database := self.GetDatabase(table.DatabaseName)
+	if database.GetTable(table.Name) != nil {
 		panic("table already exists: " + table.Name)
 	}
 	if table.ClusterIndex == nil {
@@ -171,12 +171,25 @@ func (self *IcnaStore) CreateTable(table *meta.Table) {
 }
 
 func (self *IcnaStore) DropTable(databaseName string, tableName string) {
-	database := self.getDatabase(databaseName)
-	table := database.TableMap[tableName]
+	database := self.GetDatabase(databaseName)
+	table := database.GetTable(tableName)
 	if table == nil {
 		panic("table not exists: " + tableName)
 	}
 	os.Remove(table.DataPath)
 	os.Remove(table.MetaPath)
 	delete(database.TableMap, tableName)
+}
+
+func (self *IcnaStore) GetTable(databaseName string, tableName string) *meta.Table {
+	database := self.GetDatabase(databaseName)
+	table := database.GetTable(tableName)
+	if table == nil {
+		panic("table not exists: " + tableName)
+	}
+	return table
+}
+
+func (self *IcnaStore) Insert(databaseName string, tableName string, entrys ...meta.IndexEntry) {
+
 }

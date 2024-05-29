@@ -144,7 +144,7 @@ func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement
 	fieldLength := len(stmt.ColumnDefinitions)
 	fields := make([]*meta.Field, fieldLength)
 	var primaryFiled *meta.Field
-	fieldMap := make(map[string]uint, fieldLength)
+	fieldMap := make(map[string]*meta.Field, fieldLength)
 	var clusterIndex meta.Index
 	var secondaryIndexes []meta.Index
 	for i, definition := range stmt.ColumnDefinitions {
@@ -158,7 +158,7 @@ func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement
 			clusterIndex = bptree.NewBPTree(field.Name, []*meta.Field{primaryFiled}, field.Flag)
 		}
 		fields[i] = field
-		fieldMap[field.Name] = field.Index
+		fieldMap[field.Name] = field
 	}
 	connection := self.ctx.GetConnection()
 	table := meta.NewTable(connection.GetDatabase(), self.evalExpression(stmt.Name).ToString(), fields, primaryFiled, fieldMap, clusterIndex, secondaryIndexes)
@@ -177,7 +177,25 @@ func (self *Executor) executeDropTableStatement(stmt *ast.DropTableStatement) Re
 }
 
 func (self *Executor) executeInsertStatement(stmt *ast.InsertStatement) RecordSet {
-	return NewRecordSet(0, 0, nil, nil)
+	connection := self.ctx.GetConnection()
+	store := self.ctx.GetStore()
+	databaseName := connection.GetDatabase()
+	if stmt.TableName.Schema != nil {
+		databaseName = self.evalExpression(stmt.TableName.Schema).ToString()
+	}
+	tableName := self.evalExpression(stmt.TableName.Name).ToString()
+	table := store.GetTable(databaseName, tableName)
+	entrys := make([]meta.IndexEntry, len(stmt.Values))
+	for i, originalValues := range stmt.Values {
+		values := make([]meta.Value, len(originalValues))
+		for j, originalValue := range originalValues {
+			values[j] = self.evalExpression(originalValue)
+		}
+		desc := meta.NewIndexDescByAllArgs(table.Fields, table.PrimaryFiled, table.FieldMap)
+		entrys[i] = meta.NewClusterIndexEntry(values, desc)
+	}
+	store.Insert(databaseName, tableName, entrys...)
+	return NewRecordSet(uint64(len(entrys)), 0, nil, nil)
 }
 
 func (self *Executor) executeDeleteStatement(stmt *ast.DeleteStatement) RecordSet {

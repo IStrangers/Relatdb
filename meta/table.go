@@ -7,15 +7,14 @@ type Table struct {
 	Name             string
 	Fields           []*Field
 	PrimaryFiled     *Field
-	FieldMap         map[string]uint
+	FieldMap         map[string]*Field
 	ClusterIndex     Index
 	SecondaryIndexes []Index
 }
 
 func NewTable(
 	databaseName string, name string, fields []*Field, primaryFiled *Field,
-	fieldMap map[string]uint, clusterIndex Index,
-	secondaryIndexes []Index,
+	fieldMap map[string]*Field, clusterIndex Index, secondaryIndexes []Index,
 ) *Table {
 	return &Table{
 		DatabaseName:     databaseName,
@@ -26,4 +25,9 @@ func NewTable(
 		ClusterIndex:     clusterIndex,
 		SecondaryIndexes: secondaryIndexes,
 	}
+}
+
+func (self *Table) GetField(fieldName string) *Field {
+	field := self.FieldMap[fieldName]
+	return field
 }

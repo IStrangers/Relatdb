@@ -11,3 +11,8 @@ func NewDataBase(name string) *DataBase {
 		TableMap: make(map[string]*Table),
 	}
 }
+
+func (self *DataBase) GetTable(tableName string) *Table {
+	table := self.TableMap[tableName]
+	return table
+}
