@@ -70,6 +70,12 @@ func (self *Executor) Execute() RecordSet {
 		return self.executeCreateTableStatement(stmt)
 	case *ast.DropTableStatement:
 		return self.executeDropTableStatement(stmt)
+	case *ast.InsertStatement:
+		return self.executeInsertStatement(stmt)
+	case *ast.DeleteStatement:
+		return self.executeDeleteStatement(stmt)
+	case *ast.UpdateStatement:
+		return self.executeUpdateStatement(stmt)
 	case *ast.SelectStatement:
 		return self.executeSelectStatement(stmt)
 	default:
@@ -167,6 +173,18 @@ func (self *Executor) executeDropTableStatement(stmt *ast.DropTableStatement) Re
 	for _, name := range stmt.Names {
 		store.DropTable(connection.GetDatabase(), self.evalExpression(name.Name).ToString())
 	}
+	return NewRecordSet(0, 0, nil, nil)
+}
+
+func (self *Executor) executeInsertStatement(stmt *ast.InsertStatement) RecordSet {
+	return NewRecordSet(0, 0, nil, nil)
+}
+
+func (self *Executor) executeDeleteStatement(stmt *ast.DeleteStatement) RecordSet {
+	return NewRecordSet(0, 0, nil, nil)
+}
+
+func (self *Executor) executeUpdateStatement(stmt *ast.UpdateStatement) RecordSet {
 	return NewRecordSet(0, 0, nil, nil)
 }
 
