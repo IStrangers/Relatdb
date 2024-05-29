@@ -143,6 +143,18 @@ func (self *IcnaStore) getDatabase(databaseName string) *meta.DataBase {
 	return database
 }
 
+func (self *IcnaStore) CreateDatabase(database *meta.DataBase) {
+	self.databaseMap[database.Name] = database
+}
+
+func (self *IcnaStore) DropDatabase(databaseName string) {
+	database := self.databaseMap[databaseName]
+	for _, table := range database.TableMap {
+		self.DropTable(database.Name, table.Name)
+	}
+	delete(self.databaseMap, database.Name)
+}
+
 func (self *IcnaStore) CreateTable(table *meta.Table) {
 	database := self.getDatabase(table.DatabaseName)
 	if database.TableMap[table.Name] != nil {

@@ -56,6 +56,10 @@ func (self *Executor) evalExpression(expr ast.Expression) meta.Value {
 
 func (self *Executor) Execute() RecordSet {
 	switch stmt := self.stmt.(type) {
+	case *ast.CreateDatabaseStatement:
+		return self.executeCreateDatabaseStatement(stmt)
+	case *ast.DropDatabaseStatement:
+		return self.executeDropDatabaseStatement(stmt)
 	case *ast.UseStatement:
 		return self.executeUseStatement(stmt)
 	case *ast.ShowStatement:
@@ -73,10 +77,25 @@ func (self *Executor) Execute() RecordSet {
 	}
 }
 
+func (self *Executor) executeCreateDatabaseStatement(stmt *ast.CreateDatabaseStatement) RecordSet {
+	store := self.ctx.GetStore()
+	databaseName := self.evalExpression(stmt.Name).ToString()
+	database := meta.NewDataBase(databaseName)
+	store.CreateDatabase(database)
+	return NewRecordSet(0, 0, nil, nil)
+}
+
+func (self *Executor) executeDropDatabaseStatement(stmt *ast.DropDatabaseStatement) RecordSet {
+	store := self.ctx.GetStore()
+	databaseName := self.evalExpression(stmt.Name).ToString()
+	store.DropDatabase(databaseName)
+	return NewRecordSet(0, 0, nil, nil)
+}
+
 func (self *Executor) executeUseStatement(stmt *ast.UseStatement) RecordSet {
 	connection := self.ctx.GetConnection()
 	connection.SetDatabase(self.evalExpression(stmt.Database).ToString())
-	return NewRecordSet(0, 0, []meta.Value{}, [][]meta.Value{})
+	return NewRecordSet(0, 0, nil, nil)
 }
 
 func (self *Executor) executeShowStatement(stmt *ast.ShowStatement) RecordSet {
@@ -112,7 +131,7 @@ func (self *Executor) executeSetVariableStatement(stmt *ast.SetVariableStatement
 	name := self.evalExpression(stmt.Name).ToString()
 	value := self.evalExpression(stmt.Value).ToString()
 	session.SetVariable(name, value)
-	return NewRecordSet(0, 0, []meta.Value{}, [][]meta.Value{})
+	return NewRecordSet(0, 0, nil, nil)
 }
 
 func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement) RecordSet {
