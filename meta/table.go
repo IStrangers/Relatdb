@@ -31,3 +31,10 @@ func (self *Table) GetField(fieldName string) *Field {
 	field := self.FieldMap[fieldName]
 	return field
 }
+
+func (self *Table) Insert(entry IndexEntry) {
+	self.ClusterIndex.Insert(entry)
+	for _, secondaryIndex := range self.SecondaryIndexes {
+		secondaryIndex.Insert(entry)
+	}
+}

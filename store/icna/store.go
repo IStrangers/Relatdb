@@ -190,6 +190,11 @@ func (self *IcnaStore) GetTable(databaseName string, tableName string) *meta.Tab
 	return table
 }
 
-func (self *IcnaStore) Insert(databaseName string, tableName string, entrys ...meta.IndexEntry) {
-
+func (self *IcnaStore) Insert(databaseName string, tableName string, columns []string, rows [][]meta.Value) {
+	table := self.GetTable(databaseName, tableName)
+	for _, values := range rows {
+		desc := meta.NewIndexDescByAllArgs(table.Fields, table.PrimaryFiled, table.FieldMap)
+		entry := meta.NewClusterIndexEntry(values, desc)
+		table.Insert(entry)
+	}
 }

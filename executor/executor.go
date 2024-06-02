@@ -32,6 +32,8 @@ func (self *Executor) evalExpression(expr ast.Expression) meta.Value {
 	switch expr := expr.(type) {
 	case *ast.TableName:
 		return self.evalExpression(expr.Name)
+	case *ast.ColumnName:
+		return self.evalExpression(expr.Name)
 	case *ast.Identifier:
 		return meta.StringValue(expr.Name)
 	case *ast.StringLiteral:
@@ -184,18 +186,20 @@ func (self *Executor) executeInsertStatement(stmt *ast.InsertStatement) RecordSe
 		databaseName = self.evalExpression(stmt.TableName.Schema).ToString()
 	}
 	tableName := self.evalExpression(stmt.TableName.Name).ToString()
-	table := store.GetTable(databaseName, tableName)
-	entrys := make([]meta.IndexEntry, len(stmt.Values))
+	columns := make([]string, len(stmt.ColumnNames))
+	for i, columnName := range stmt.ColumnNames {
+		columns[i] = self.evalExpression(columnName.Name).ToString()
+	}
+	rows := make([][]meta.Value, len(stmt.Values))
 	for i, originalValues := range stmt.Values {
 		values := make([]meta.Value, len(originalValues))
 		for j, originalValue := range originalValues {
 			values[j] = self.evalExpression(originalValue)
 		}
-		desc := meta.NewIndexDescByAllArgs(table.Fields, table.PrimaryFiled, table.FieldMap)
-		entrys[i] = meta.NewClusterIndexEntry(values, desc)
+		rows[i] = values
 	}
-	store.Insert(databaseName, tableName, entrys...)
-	return NewRecordSet(uint64(len(entrys)), 0, nil, nil)
+	store.Insert(databaseName, tableName, columns, rows)
+	return NewRecordSet(uint64(len(rows)), 0, nil, nil)
 }
 
 func (self *Executor) executeDeleteStatement(stmt *ast.DeleteStatement) RecordSet {

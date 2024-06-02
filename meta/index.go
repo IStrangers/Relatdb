@@ -17,6 +17,7 @@ type Index interface {
 	GetFlag() uint
 	IsPrimary() bool
 	IsUnique() bool
+	Insert(entry IndexEntry)
 }
 
 type BaseIndex struct {

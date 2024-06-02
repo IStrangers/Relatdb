@@ -19,3 +19,7 @@ func NewBPTree(name string, fields []*meta.Field, flag uint) *BPTree {
 	bpTree.Head = bpTree.Root
 	return bpTree
 }
+
+func (self *BPTree) Insert(entry meta.IndexEntry) {
+	//self.Root.Insert(entry, self, self.IsUnique())
+}
