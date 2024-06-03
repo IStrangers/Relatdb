@@ -281,9 +281,10 @@ func (self *Parser) parseInsertStatement() ast.Statement {
 	}
 	self.expectToken(token.INTO)
 	insertStatement.TableName = self.parseTableName()
-	self.expectToken(token.LEFT_PARENTHESIS)
-	insertStatement.ColumnNames = self.parseColumnNames()
-	self.expectToken(token.RIGHT_PARENTHESIS)
+	if self.expectEqualsToken(token.LEFT_PARENTHESIS) {
+		insertStatement.ColumnNames = self.parseColumnNames()
+		self.expectToken(token.RIGHT_PARENTHESIS)
+	}
 	self.expectToken(token.VALUES)
 	for {
 		self.expectToken(token.LEFT_PARENTHESIS)

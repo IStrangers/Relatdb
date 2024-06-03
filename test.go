@@ -12,12 +12,14 @@ func main() {
 		panic(err)
 	}
 	res, err := db.Exec(`
-		create table myBase.User(
+		/*create table if not exists User(
 		    id INT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
     		email VARCHAR(50) UNIQUE COMMENT '邮箱',
     		age INT UNSIGNED DEFAULT 1 COMMENT '年龄',
     		noId INT(6) ZEROFILL
-		);
+		);*/
+		insert into User VALUES (1,'1@qq.com',1,1);
+		insert into User(id,noId,email,age) VALUES (1,1,'1@qq.com',1);
 	`)
 	if err != nil {
 		panic(err)

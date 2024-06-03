@@ -117,7 +117,7 @@ func NewClusterIndexEntry(values []Value, desc *IndexDesc) *ClusterIndexEntry {
 }
 
 func (self *ClusterIndexEntry) GetCompareEntry() IndexEntry {
-	if self.CompareEntry == nil {
+	if self.IndexEntry == nil {
 		primaryAttr := self.Desc.PrimaryFiled
 		rowId := self.Values[primaryAttr.Index]
 		desc := NewIndexDesc([]*Field{primaryAttr})

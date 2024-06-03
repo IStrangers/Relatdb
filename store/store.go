@@ -10,5 +10,6 @@ type Store interface {
 	CreateTable(table *meta.Table)
 	DropTable(databaseName string, tableName string)
 	GetTable(databaseName string, tableName string) *meta.Table
+	ExistTable(databaseName string, tableName string) bool
 	Insert(databaseName string, tableName string, columns []string, rows [][]meta.Value)
 }

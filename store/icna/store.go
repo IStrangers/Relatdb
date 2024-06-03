@@ -190,11 +190,34 @@ func (self *IcnaStore) GetTable(databaseName string, tableName string) *meta.Tab
 	return table
 }
 
+func (self *IcnaStore) ExistTable(databaseName string, tableName string) bool {
+	database := self.GetDatabase(databaseName)
+	table := database.GetTable(tableName)
+	return table != nil
+}
+
 func (self *IcnaStore) Insert(databaseName string, tableName string, columns []string, rows [][]meta.Value) {
 	table := self.GetTable(databaseName, tableName)
+	columnMap := make(map[string]int, len(columns))
+	for i, column := range columns {
+		columnMap[column] = i
+	}
+	hasColumn := len(columnMap) > 0
 	for _, values := range rows {
+		fullValues := make([]meta.Value, len(table.Fields))
+		if hasColumn {
+			for i, field := range table.Fields {
+				if index, ok := columnMap[field.Name]; ok {
+					fullValues[i] = values[index]
+				}
+			}
+		} else {
+			for i := 0; i < min(len(table.Fields), len(values)); i++ {
+				fullValues[i] = values[i]
+			}
+		}
 		desc := meta.NewIndexDescByAllArgs(table.Fields, table.PrimaryFiled, table.FieldMap)
-		entry := meta.NewClusterIndexEntry(values, desc)
+		entry := meta.NewClusterIndexEntry(fullValues, desc)
 		table.Insert(entry)
 	}
 }

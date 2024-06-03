@@ -5,10 +5,24 @@ import (
 )
 
 type BPPage struct {
+	*store.Page
 	PageNo            uint
 	Node              *BPNode
 	NodeInitFreeSpace uint
 	LeafInitFreeSpace uint
+}
+
+func NewBPPage(node *BPNode) *BPPage {
+	bpPage := &BPPage{
+		Page:   store.NewPage(),
+		PageNo: 1,
+		Node:   node,
+	}
+	nodeInitFreeSpace := bpPage.Length - store.DEFAULT_SPECIAL_POINT_LENGTH - store.PAGE_HEADER_SIZE - store.ITEM_INT_LENGTH*7
+	leafInitFreeSpace := bpPage.Length - store.DEFAULT_SPECIAL_POINT_LENGTH - store.PAGE_HEADER_SIZE - store.ITEM_INT_LENGTH*6
+	bpPage.NodeInitFreeSpace = nodeInitFreeSpace
+	bpPage.LeafInitFreeSpace = leafInitFreeSpace
+	return bpPage
 }
 
 func (self *BPPage) getInitFreeSpace() uint {

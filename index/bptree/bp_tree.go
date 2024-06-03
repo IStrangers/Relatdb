@@ -21,5 +21,5 @@ func NewBPTree(name string, fields []*meta.Field, flag uint) *BPTree {
 }
 
 func (self *BPTree) Insert(entry meta.IndexEntry) {
-	//self.Root.Insert(entry, self, self.IsUnique())
+	self.Root.Insert(entry, self, self.IsUnique())
 }

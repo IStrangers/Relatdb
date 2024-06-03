@@ -143,29 +143,33 @@ func (self *Executor) executeSetVariableStatement(stmt *ast.SetVariableStatement
 }
 
 func (self *Executor) executeCreateTableStatement(stmt *ast.CreateTableStatement) RecordSet {
-	fieldLength := len(stmt.ColumnDefinitions)
-	fields := make([]*meta.Field, fieldLength)
-	var primaryFiled *meta.Field
-	fieldMap := make(map[string]*meta.Field, fieldLength)
-	var clusterIndex meta.Index
-	var secondaryIndexes []meta.Index
-	for i, definition := range stmt.ColumnDefinitions {
-		field := meta.NewField(
-			uint(i), self.evalExpression(definition.Name).ToString(), definition.Type, definition.Flag,
-			meta.ToValue(self.evalExpressionOrDefaultValue(definition.DefaultValue, nil)),
-			self.evalExpressionOrDefaultValue(definition.Comment, "").ToString(),
-		)
-		if field.Flag&common.PRIMARY_KEY_FLAG != 0 {
-			primaryFiled = field
-			clusterIndex = bptree.NewBPTree(field.Name, []*meta.Field{primaryFiled}, field.Flag)
-		}
-		fields[i] = field
-		fieldMap[field.Name] = field
-	}
 	connection := self.ctx.GetConnection()
-	table := meta.NewTable(connection.GetDatabase(), self.evalExpression(stmt.Name).ToString(), fields, primaryFiled, fieldMap, clusterIndex, secondaryIndexes)
 	store := self.ctx.GetStore()
-	store.CreateTable(table)
+	databaseName := connection.GetDatabase()
+	tableName := self.evalExpression(stmt.Name).ToString()
+	if !stmt.IfNotExists || !store.ExistTable(databaseName, tableName) {
+		fieldLength := len(stmt.ColumnDefinitions)
+		fields := make([]*meta.Field, fieldLength)
+		var primaryFiled *meta.Field
+		fieldMap := make(map[string]*meta.Field, fieldLength)
+		var clusterIndex meta.Index
+		var secondaryIndexes []meta.Index
+		for i, definition := range stmt.ColumnDefinitions {
+			field := meta.NewField(
+				uint(i), self.evalExpression(definition.Name).ToString(), definition.Type, definition.Flag,
+				meta.ToValue(self.evalExpressionOrDefaultValue(definition.DefaultValue, nil)),
+				self.evalExpressionOrDefaultValue(definition.Comment, "").ToString(),
+			)
+			if field.Flag&common.PRIMARY_KEY_FLAG != 0 {
+				primaryFiled = field
+				clusterIndex = bptree.NewBPTree(field.Name, []*meta.Field{primaryFiled}, field.Flag)
+			}
+			fields[i] = field
+			fieldMap[field.Name] = field
+		}
+		table := meta.NewTable(databaseName, tableName, fields, primaryFiled, fieldMap, clusterIndex, secondaryIndexes)
+		store.CreateTable(table)
+	}
 	return NewRecordSet(0, 0, nil, nil)
 }
 
@@ -173,7 +177,11 @@ func (self *Executor) executeDropTableStatement(stmt *ast.DropTableStatement) Re
 	connection := self.ctx.GetConnection()
 	store := self.ctx.GetStore()
 	for _, name := range stmt.Names {
-		store.DropTable(connection.GetDatabase(), self.evalExpression(name.Name).ToString())
+		databaseName := connection.GetDatabase()
+		if name.Schema != nil {
+			databaseName = self.evalExpression(name.Schema).ToString()
+		}
+		store.DropTable(databaseName, self.evalExpression(name.Name).ToString())
 	}
 	return NewRecordSet(0, 0, nil, nil)
 }
@@ -192,6 +200,9 @@ func (self *Executor) executeInsertStatement(stmt *ast.InsertStatement) RecordSe
 	}
 	rows := make([][]meta.Value, len(stmt.Values))
 	for i, originalValues := range stmt.Values {
+		if len(stmt.ColumnNames) > 0 && len(stmt.ColumnNames) != len(originalValues) {
+			panic("the length of columns and values is inconsistent")
+		}
 		values := make([]meta.Value, len(originalValues))
 		for j, originalValue := range originalValues {
 			values[j] = self.evalExpression(originalValue)
