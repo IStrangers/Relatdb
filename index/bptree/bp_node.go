@@ -24,10 +24,10 @@ func NewBPNode(ownerTree *BPTree, isRoot bool, isLeaf bool) *BPNode {
 		OwnerTree: ownerTree,
 		IsRoot:    isRoot,
 		isLeaf:    isLeaf,
-		Entries:   make([]meta.IndexEntry, 1),
+		Entries:   []meta.IndexEntry{},
 	}
 	if !isLeaf {
-		bpNode.Children = make([]*BPNode, 3)
+		bpNode.Children = []*BPNode{}
 	}
 	bpNode.Page = NewBPPage(bpNode)
 	return bpNode
